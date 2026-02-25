@@ -4,9 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example</groupId>
+	<parent>
+		<groupId>org.example</groupId>
+		<artifactId>degree_monitoring_service</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
     <artifactId>Licenta_test_serverside_app</artifactId>
-    <version>1.0-SNAPSHOT</version>
+
     <name>Licenta_test_serverside_app</name>
     <packaging>war</packaging>
 
