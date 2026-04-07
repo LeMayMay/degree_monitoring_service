@@ -14,7 +14,10 @@ public class PCConfig {
     private String hostname;
     private String cpuModel;
     private int ramGb;
+    private String storage;
+    private String network;
     private String osVersion;
+
 
     public PCConfig() {}
 
@@ -30,6 +33,12 @@ public class PCConfig {
 
     public int getRamGb() { return ramGb; }
     public void setRamGb(int ramGb) { this.ramGb = ramGb; }
+
+    public String getStorage() { return storage; }
+    public void setStorage(String storage) { this.storage = storage; }
+
+    public String getNetwork() { return network; }
+    public void setNetwork(String network) { this.network = network; }
 
     public String getOsVersion() { return osVersion; }
     public void setOsVersion(String osVersion) { this.osVersion = osVersion; }

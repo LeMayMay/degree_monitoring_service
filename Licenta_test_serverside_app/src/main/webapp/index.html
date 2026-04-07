@@ -21,6 +21,8 @@
         <th>Hostname</th>
         <th>CPU Model</th>
         <th>RAM (GB)</th>
+        <th>Storage</th>
+        <!-- <th>Network</th> -->
         <th>OS Version</th>
     </tr>
     </thead>
@@ -39,6 +41,8 @@
                         <td>${pc.hostname}</td>
                         <td>${pc.cpuModel}</td>
                         <td>${pc.ramGb}</td>
+                        <td>${pc.storage}</td>
+                        <!--<td>${pc.network}</td> -->
                         <td>${pc.osVersion}</td>
                     </tr>`;
                 tbody.innerHTML += row;

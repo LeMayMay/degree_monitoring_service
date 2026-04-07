@@ -2,14 +2,18 @@ package org.example;
 
 import com.google.gson.Gson;
 import oshi.SystemInfo;
+import oshi.hardware.HWDiskStore;
 import oshi.hardware.HardwareAbstractionLayer;
+import oshi.hardware.NetworkIF;
 import oshi.software.os.OperatingSystem;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Main {
@@ -17,22 +21,70 @@ public class Main {
 
         System.out.println("Gathering system information...");
 
-        SystemInfo systemInfo = new SystemInfo();
-        HardwareAbstractionLayer hardware = systemInfo.getHardware();
-        OperatingSystem os = systemInfo.getOperatingSystem();
+        //instantiating of oshi objects
+        SystemInfo systemInfo = new SystemInfo();   //main entry point
+        HardwareAbstractionLayer hardware = systemInfo.getHardware();   //hardware information is here
+        OperatingSystem os = systemInfo.getOperatingSystem();           //OS information is here
 
+        //isolating specifc information
         String hostname = os.getNetworkParams().getHostName();
-        String cpuModel = hardware.getProcessor().getProcessorIdentifier().getName().trim();
 
+        //cpu
+        String cpuName = hardware.getProcessor().getProcessorIdentifier().getName().trim();
+        int physCores = hardware.getProcessor().getPhysicalProcessorCount();
+        int logCores = hardware.getProcessor().getLogicalProcessorCount();
+        String cpuInfo = "CPU Name: " + cpuName + " Physical cores: " + physCores + " Logical cores: " + logCores;
+
+        //RAM in GigaBytes
         long memoryBytes = hardware.getMemory().getTotal();
         int ramGb = (int) Math.round((double) memoryBytes / (1024 * 1024 * 1024));
 
+        //Storage - Disk Drives
+        List<HWDiskStore> diskStores = hardware.getDiskStores();
+        String diskModel;
+        String diskName;
+        long diskSizeGB;
+        StringBuilder disksInfo = new StringBuilder();
+
+        //OS name + version
         String osVersion = os.getFamily() + " " + os.getVersionInfo().getVersion();
 
+        //Network adapters
+        /*List<NetworkIF> networkInterfaces = hardware.getNetworkIFs();
+        String netName;
+        String netMacAddr;
+        String[] ipv4Addr;
+        StringBuilder networksInfo = new StringBuilder();*/
+
         Map<String, Object> configData = new HashMap<>();
+
         configData.put("hostname", hostname);
-        configData.put("cpuModel", cpuModel);
+
+        configData.put("cpuModel", cpuInfo);
+
         configData.put("ramGb", ramGb);
+
+        for (int i = 0; i < diskStores.size(); i++){
+            diskModel = diskStores.get(i).getModel();
+            diskName = diskStores.get(i).getName();
+            diskSizeGB = diskStores.get(i).getSize() / (1024 * 1024 * 1024);
+            String diskInfo = " Model: " + diskModel + " Size in GB: " + diskSizeGB;
+            disksInfo.append(diskInfo);
+        }
+        configData.put("storage", disksInfo.toString());
+
+        /*for(int i = 0; i < networkInterfaces.size(); i++){
+            if (networkInterfaces.get(i).getMacaddr().isEmpty() || networkInterfaces.get(i).getIPv4addr().length == 0) {
+                continue;
+            }
+            netName = networkInterfaces.get(i).getDisplayName();
+            netMacAddr = networkInterfaces.get(i).getMacaddr();
+            ipv4Addr = networkInterfaces.get(i).getIPv4addr();
+            String networkInfo = " Network name: " + netName + " Network MAC Address: " + netMacAddr + " Ipv4 Address: " + Arrays.toString(ipv4Addr);
+            networksInfo.append(networkInfo);
+        }
+        configData.put("network", networksInfo.toString());*/
+
         configData.put("osVersion", osVersion);
 
         Gson gson = new Gson();
