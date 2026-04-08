@@ -8,6 +8,7 @@ import oshi.hardware.HardwareAbstractionLayer;
 import oshi.hardware.NetworkIF;
 import oshi.software.os.OperatingSystem;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
@@ -129,6 +130,7 @@ public class Main {
 
             if (response.statusCode() == 201) {
                 System.out.println("Success! Server saved the configuration.");
+                JOptionPane.showMessageDialog(null,"Success! Server saved the configuration.","Data sent",1);
             } else {
                 System.out.println("Server returned status code: " + response.statusCode());
             }
