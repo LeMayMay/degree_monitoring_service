@@ -2,6 +2,7 @@ package org.example;
 
 import com.google.gson.Gson;
 import oshi.SystemInfo;
+import oshi.hardware.GraphicsCard;
 import oshi.hardware.HWDiskStore;
 import oshi.hardware.HardwareAbstractionLayer;
 import oshi.hardware.NetworkIF;
@@ -51,6 +52,11 @@ public class Main {
         long diskSizeGB;
         StringBuilder disksInfo = new StringBuilder();
 
+        //GPU
+        List<GraphicsCard> cards = hardware.getGraphicsCards();
+        String gpuName;
+        StringBuilder gpuInfo = new StringBuilder();
+
         //OS name + version
         String osVersion = os.getFamily() + " " + os.getVersionInfo().getVersion();
 
@@ -80,6 +86,12 @@ public class Main {
             disksInfo.append(diskInfo);
         }
         configData.put("storage", disksInfo.toString());
+
+        for (int i = 0; i < cards.size(); i++){
+            gpuName = cards.get(i).getName();
+            gpuInfo.append(gpuName + " ");
+        }
+        configData.put("graphicsCards", gpuInfo.toString());
 
         configData.put("osVersion", osVersion);
 

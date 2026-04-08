@@ -15,6 +15,7 @@ public class PCConfig {
     private String cpuModel;
     private int ramGb;
     private String storage;
+    private String graphicsCards;
     private String osVersion;
     private String network;
     private String antivirus;
@@ -37,6 +38,9 @@ public class PCConfig {
 
     public String getStorage() { return storage; }
     public void setStorage(String storage) { this.storage = storage; }
+
+    public String getGraphicsCards() { return graphicsCards; }
+    public void setGraphicsCards(String graphicsCards) { this.graphicsCards = graphicsCards; }
 
     public String getOsVersion() { return osVersion; }
     public void setOsVersion(String osVersion) { this.osVersion = osVersion; }
