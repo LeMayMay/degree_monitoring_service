@@ -22,8 +22,9 @@
         <th>CPU Model</th>
         <th>RAM (GB)</th>
         <th>Storage</th>
-        <!-- <th>Network</th> -->
         <th>OS Version</th>
+        <!-- <th>Network</th> -->
+        <th>Installed Antivirus Soft.</th>
     </tr>
     </thead>
     <tbody>
@@ -42,8 +43,9 @@
                         <td>${pc.cpuModel}</td>
                         <td>${pc.ramGb}</td>
                         <td>${pc.storage}</td>
-                        <!--<td>${pc.network}</td> -->
                         <td>${pc.osVersion}</td>
+                        <!--<td>${pc.network}</td> -->
+                        <td>${pc.antivirus}</td>
                     </tr>`;
                 tbody.innerHTML += row;
             });

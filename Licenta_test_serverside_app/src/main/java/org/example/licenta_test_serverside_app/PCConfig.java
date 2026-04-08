@@ -15,8 +15,9 @@ public class PCConfig {
     private String cpuModel;
     private int ramGb;
     private String storage;
-    private String network;
     private String osVersion;
+    private String network;
+    private String antivirus;
 
 
     public PCConfig() {}
@@ -37,9 +38,12 @@ public class PCConfig {
     public String getStorage() { return storage; }
     public void setStorage(String storage) { this.storage = storage; }
 
+    public String getOsVersion() { return osVersion; }
+    public void setOsVersion(String osVersion) { this.osVersion = osVersion; }
+
     public String getNetwork() { return network; }
     public void setNetwork(String network) { this.network = network; }
 
-    public String getOsVersion() { return osVersion; }
-    public void setOsVersion(String osVersion) { this.osVersion = osVersion; }
+    public String getAntivirus() { return antivirus; }
+    public void setAntivirus(String antivirus) { this.antivirus = antivirus; }
 }

@@ -7,16 +7,21 @@ import oshi.hardware.HardwareAbstractionLayer;
 import oshi.hardware.NetworkIF;
 import oshi.software.os.OperatingSystem;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Main {
+    private static final Set<String> AV_KEYWORDS = new HashSet<>(Arrays.asList(
+            "malwarebytes", "bitdefender", "norton", "mcafee", "avast",
+            "avg", "eset", "kaspersky", "sophos", "sentinelone",
+            "crowdstrike", "trend micro", "avira", "totalav", "defender",
+            "f-secure", "bullguard", "webroot", "panda security", "intego"
+    ));
     public static void main(String[] args) {
 
         System.out.println("Gathering system information...");
@@ -56,6 +61,9 @@ public class Main {
         String[] ipv4Addr;
         StringBuilder networksInfo = new StringBuilder();*/
 
+        //Antivirus Software Installed
+        String foundApps = getDetectedAntivirus();
+
         Map<String, Object> configData = new HashMap<>();
 
         configData.put("hostname", hostname);
@@ -73,6 +81,8 @@ public class Main {
         }
         configData.put("storage", disksInfo.toString());
 
+        configData.put("osVersion", osVersion);
+
         /*for(int i = 0; i < networkInterfaces.size(); i++){
             if (networkInterfaces.get(i).getMacaddr().isEmpty() || networkInterfaces.get(i).getIPv4addr().length == 0) {
                 continue;
@@ -85,7 +95,7 @@ public class Main {
         }
         configData.put("network", networksInfo.toString());*/
 
-        configData.put("osVersion", osVersion);
+        configData.put("antivirus", foundApps);
 
         Gson gson = new Gson();
         String jsonPayload = gson.toJson(configData);
@@ -115,5 +125,51 @@ public class Main {
             System.err.println("Failed to send data. Ensure the server is running.");
             e.printStackTrace();
         }
+
+    }
+    public static String getDetectedAntivirus() {
+        String os = System.getProperty("os.name").toLowerCase();
+        String command;
+        if (os.contains("win")) {
+            // for windows:
+            command = "powershell -command \"Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*, " +
+                    "HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | " +
+                    "Select-Object -ExpandProperty DisplayName -ErrorAction SilentlyContinue\"";
+        } else if (os.contains("mac")) {
+            // for macOS:
+            command = "ls /Applications";
+        } else {
+            // for Linux:
+            command = "dpkg-query -W -f=${Package}\\n";
+        }
+
+        return filterResults(command);
+    }
+
+    private static String filterResults(String command) {
+        StringBuilder filteredOutput = new StringBuilder();
+        try {
+            String[] cmdArray = System.getProperty("os.name").toLowerCase().contains("win")
+                    ? new String[]{"powershell", "-command", command.replace("powershell -command ", "").replace("\"", "")}
+                    : new String[]{"/bin/sh", "-c", command};
+
+            Process process = Runtime.getRuntime().exec(cmdArray);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String lowerLine = line.toLowerCase().trim();
+                for (String av : AV_KEYWORDS) {
+                    if (lowerLine.contains(av)) {
+                        filteredOutput.append(line).append("\n");
+                        break; // Move to next line once a match is found
+                    }
+                }
+            }
+            process.waitFor();
+        } catch (Exception e) {
+            return "Error during scan: " + e.getMessage();
+        }
+        return filteredOutput.toString();
     }
 }
