@@ -27,6 +27,9 @@ public class PCConfigHistory {
     @Column(name = "machine_id")
     private String machineId;
 
+    @Column(name = "room_name")
+    private String roomName;
+
     // Default constructor
     public PCConfigHistory() {}
 
@@ -42,6 +45,7 @@ public class PCConfigHistory {
         this.osVersion = config.getOsVersion();
         this.antivirus = config.getAntivirus();
         this.savedAt = LocalDateTime.now();
+        this.roomName = config.getRoomName();
     }
 
     // Getters and Setters
@@ -67,4 +71,6 @@ public class PCConfigHistory {
     public void setSavedAt(LocalDateTime savedAt) { this.savedAt = savedAt; }
     public String getMachineId() { return machineId; }
     public void setMachineId(String machineId) { this.machineId = machineId; }
+    public String getRoomName() { return roomName; }
+    public void setRoomName(String roomName) { this.roomName = roomName; }
 }

@@ -21,6 +21,9 @@ public class PCConfig {
     private String antivirus;
     private String machineId;
 
+    @Column(name = "room_name")
+    private String roomName;
+
     public PCConfig() {}
 
     // Getters and Setters
@@ -53,4 +56,7 @@ public class PCConfig {
 
     public String getMachineId() { return machineId; }
     public void setMachineId(String machineId) { this.machineId = machineId; }
+
+    public String getRoomName() { return roomName; }
+    public void setRoomName(String roomName) { this.roomName = roomName; }
 }

@@ -70,7 +70,7 @@ public class Main {
         // Build Payload
         Map<String, Object> configData = new HashMap<>();
         configData.put("machineId", machineId); // <-- NEW FIELD ADDED HERE
-        configData.put("hostname", hostname);
+        configData.put("hostname", "REZE");
         configData.put("cpuModel", cpuInfo);
         configData.put("ramGb", ramGb);
         configData.put("storage", disksInfo.toString());
