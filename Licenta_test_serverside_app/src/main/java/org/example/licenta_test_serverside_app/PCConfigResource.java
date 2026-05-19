@@ -1,15 +1,19 @@
 package org.example.licenta_test_serverside_app;
 
-import jakarta.ejb.Stateless;
+import jakarta.ejb.Singleton; // <-- IMPORTANT: Changed from Stateless
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.sse.Sse;
+import jakarta.ws.rs.sse.SseBroadcaster;
+import jakarta.ws.rs.sse.SseEventSink;
 import java.util.List;
 
 @Path("/configs")
-@Stateless
+@Singleton
 @Produces(MediaType.APPLICATION_JSON) // Applies JSON to all responses
 @Consumes(MediaType.APPLICATION_JSON) // Applies JSON to all requests
 public class PCConfigResource {
@@ -17,23 +21,48 @@ public class PCConfigResource {
     @PersistenceContext(unitName = "default")
     private EntityManager em;
 
+    // --- NEW: SSE Components ---
+    @Context
+    private Sse sse;
+    private SseBroadcaster broadcaster;
+
+    // Safely initialize the broadcaster when the first client connects
+    private synchronized void initBroadcaster() {
+        if (broadcaster == null && sse != null) {
+            broadcaster = sse.newBroadcaster();
+        }
+    }
+
+    // --- NEW: The Subscription Endpoint for Browsers ---
+    @GET
+    @Path("/stream")
+    @Produces(MediaType.SERVER_SENT_EVENTS)
+    public void streamUpdates(@Context SseEventSink eventSink) {
+        initBroadcaster();
+        // Register the browser's connection to our broadcaster
+        broadcaster.register(eventSink);
+    }
+
+    // --- NEW: Helper method to trigger UI refreshes ---
+    private void notifyClients() {
+        if (broadcaster != null && sse != null) {
+            // Push a simple text event named "refresh" to all connected browsers
+            broadcaster.broadcast(sse.newEvent("refresh"));
+        }
+    }
+
     @POST
     public Response addConfig(PCConfig incomingConfig) {
-        // 1. Check if this specific PC already exists using the unique machineId
         List<PCConfig> existingList = em.createQuery(
                         "SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
                 .setParameter("mid", incomingConfig.getMachineId())
                 .getResultList();
 
         if (!existingList.isEmpty()) {
-            // MACHINE EXISTS: Handle History and Update
             PCConfig existing = existingList.get(0);
-
-            // Create a history record of the OLD state before we change it
             PCConfigHistory historyEntry = new PCConfigHistory(existing);
             em.persist(historyEntry);
 
-            // Update the existing record with the new incoming data
             existing.setHostname(incomingConfig.getHostname());
             existing.setCpuModel(incomingConfig.getCpuModel());
             existing.setRamGb(incomingConfig.getRamGb());
@@ -43,11 +72,14 @@ public class PCConfigResource {
             existing.setAntivirus(incomingConfig.getAntivirus());
 
             em.merge(existing);
+
+            notifyClients(); // <-- NEW: Push update to browsers
+
             return Response.ok(existing).build(); // 200 OK
 
         } else {
-            // MACHINE IS NEW: Insert it
             em.persist(incomingConfig);
+            notifyClients(); // <-- NEW: Push update to browsers
             return Response.status(Response.Status.CREATED).entity(incomingConfig).build(); // 201 Created
         }
     }
@@ -71,6 +103,8 @@ public class PCConfigResource {
         updatedConfig.setId(id);
         em.merge(updatedConfig);
 
+        notifyClients(); // <-- NEW: Push update to browsers
+
         return Response.ok(updatedConfig).build();
     }
 
@@ -82,10 +116,12 @@ public class PCConfigResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         em.remove(existing);
+
+        notifyClients(); // <-- NEW: Push update to browsers
+
         return Response.noContent().build(); // 204 No Content is standard for a successful delete
     }
 
-// --- UPDATED: Get History by Machine ID ---
     @GET
     @Path("/history/{machineId}")
     public Response getHistory(@PathParam("machineId") String machineId) {
@@ -97,19 +133,16 @@ public class PCConfigResource {
         return Response.ok(history).build();
     }
 
-    // --- NEW: Raw SQL Execution ---
     @POST
     @Path("/query")
-    @Consumes(MediaType.TEXT_PLAIN) // Accepts plain text SQL string
+    @Consumes(MediaType.TEXT_PLAIN)
     public Response executeSql(String sqlQuery) {
         try {
             String q = sqlQuery.trim().toUpperCase();
             if (q.startsWith("SELECT")) {
-                // Returns an array of objects for each row
                 List<?> results = em.createNativeQuery(sqlQuery).getResultList();
                 return Response.ok(results).build();
             } else {
-                // Handles UPDATE, DELETE, INSERT
                 int rowsAffected = em.createNativeQuery(sqlQuery).executeUpdate();
                 return Response.ok("{\"rowsAffected\": " + rowsAffected + "}").build();
             }
