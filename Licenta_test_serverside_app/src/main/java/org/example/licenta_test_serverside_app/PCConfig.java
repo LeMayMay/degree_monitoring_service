@@ -19,7 +19,7 @@ public class PCConfig {
     private String osVersion;
     private String network;
     private String antivirus;
-
+    private String machineId;
 
     public PCConfig() {}
 
@@ -50,4 +50,7 @@ public class PCConfig {
 
     public String getAntivirus() { return antivirus; }
     public void setAntivirus(String antivirus) { this.antivirus = antivirus; }
+
+    public String getMachineId() { return machineId; }
+    public void setMachineId(String machineId) { this.machineId = machineId; }
 }

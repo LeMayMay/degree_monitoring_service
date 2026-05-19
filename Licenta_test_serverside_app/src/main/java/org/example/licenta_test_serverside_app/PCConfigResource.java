@@ -10,62 +10,113 @@ import java.util.List;
 
 @Path("/configs")
 @Stateless
+@Produces(MediaType.APPLICATION_JSON) // Applies JSON to all responses
+@Consumes(MediaType.APPLICATION_JSON) // Applies JSON to all requests
 public class PCConfigResource {
 
     @PersistenceContext(unitName = "default")
     private EntityManager em;
 
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response addConfig(PCConfig config) {
-        em.persist(config);
-        // Returning the config so the frontend gets the newly generated ID
-        return Response.status(Response.Status.CREATED).entity(config).build();
+    public Response addConfig(PCConfig incomingConfig) {
+        // 1. Check if this specific PC already exists using the unique machineId
+        List<PCConfig> existingList = em.createQuery(
+                        "SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
+                .setParameter("mid", incomingConfig.getMachineId())
+                .getResultList();
+
+        if (!existingList.isEmpty()) {
+            // MACHINE EXISTS: Handle History and Update
+            PCConfig existing = existingList.get(0);
+
+            // Create a history record of the OLD state before we change it
+            PCConfigHistory historyEntry = new PCConfigHistory(existing);
+            em.persist(historyEntry);
+
+            // Update the existing record with the new incoming data
+            existing.setHostname(incomingConfig.getHostname());
+            existing.setCpuModel(incomingConfig.getCpuModel());
+            existing.setRamGb(incomingConfig.getRamGb());
+            existing.setStorage(incomingConfig.getStorage());
+            existing.setGraphicsCards(incomingConfig.getGraphicsCards());
+            existing.setOsVersion(incomingConfig.getOsVersion());
+            existing.setAntivirus(incomingConfig.getAntivirus());
+
+            em.merge(existing);
+            return Response.ok(existing).build(); // 200 OK
+
+        } else {
+            // MACHINE IS NEW: Insert it
+            em.persist(incomingConfig);
+            return Response.status(Response.Status.CREATED).entity(incomingConfig).build(); // 201 Created
+        }
     }
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
     public List<PCConfig> getAllConfigs() {
         return em.createQuery("SELECT p FROM PCConfig p", PCConfig.class).getResultList();
     }
 
-    // --- NEW: UPDATE an existing configuration ---
     @PUT
     @Path("/{id}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     public Response updateConfig(@PathParam("id") Long id, PCConfig updatedConfig) {
-        // 1. Check if the PC exists in the database
         PCConfig existing = em.find(PCConfig.class, id);
-
         if (existing == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        // 2. Ensure the ID from the URL is applied to the incoming object
-        updatedConfig.setId(id);
+        PCConfigHistory historyEntry = new PCConfigHistory(existing);
+        em.persist(historyEntry);
 
-        // 3. Merge the updates into the database
+        updatedConfig.setId(id);
         em.merge(updatedConfig);
 
         return Response.ok(updatedConfig).build();
     }
 
-    // --- NEW: DELETE a configuration ---
     @DELETE
     @Path("/{id}")
     public Response deleteConfig(@PathParam("id") Long id) {
-        // 1. Find the PC to delete
         PCConfig existing = em.find(PCConfig.class, id);
-
         if (existing == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-
-        // 2. Remove it from the database
         em.remove(existing);
-
         return Response.noContent().build(); // 204 No Content is standard for a successful delete
+    }
+
+// --- UPDATED: Get History by Machine ID ---
+    @GET
+    @Path("/history/{machineId}")
+    public Response getHistory(@PathParam("machineId") String machineId) {
+        List<PCConfigHistory> history = em.createQuery(
+                        "SELECT h FROM PCConfigHistory h WHERE h.machineId = :machineId ORDER BY h.savedAt DESC",
+                        PCConfigHistory.class)
+                .setParameter("machineId", machineId)
+                .getResultList();
+        return Response.ok(history).build();
+    }
+
+    // --- NEW: Raw SQL Execution ---
+    @POST
+    @Path("/query")
+    @Consumes(MediaType.TEXT_PLAIN) // Accepts plain text SQL string
+    public Response executeSql(String sqlQuery) {
+        try {
+            String q = sqlQuery.trim().toUpperCase();
+            if (q.startsWith("SELECT")) {
+                // Returns an array of objects for each row
+                List<?> results = em.createNativeQuery(sqlQuery).getResultList();
+                return Response.ok(results).build();
+            } else {
+                // Handles UPDATE, DELETE, INSERT
+                int rowsAffected = em.createNativeQuery(sqlQuery).executeUpdate();
+                return Response.ok("{\"rowsAffected\": " + rowsAffected + "}").build();
+            }
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + e.getMessage() + "\"}")
+                    .build();
+        }
     }
 }
