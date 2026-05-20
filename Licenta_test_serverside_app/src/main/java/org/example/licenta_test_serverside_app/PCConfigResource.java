@@ -20,10 +20,12 @@ public class PCConfigResource {
 
     private final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
 
+    // NEW: A timer for the Global Ping broadcast
+    private volatile long globalPingExpirationTime = 0;
+
     @PersistenceContext(unitName = "default")
     private EntityManager em;
 
-    // --- NEW: SSE Components ---
     @Context
     private Sse sse;
     private SseBroadcaster broadcaster;
@@ -35,7 +37,6 @@ public class PCConfigResource {
         }
     }
 
-    // --- NEW: The Subscription Endpoint for Browsers ---
     @GET
     @Path("/stream")
     @Produces(MediaType.SERVER_SENT_EVENTS)
@@ -45,7 +46,6 @@ public class PCConfigResource {
         broadcaster.register(eventSink);
     }
 
-    // --- NEW: Helper method to trigger UI refreshes ---
     private void notifyClients() {
         if (broadcaster != null && sse != null) {
             // Push a simple text event named "refresh" to all connected browsers
@@ -88,7 +88,6 @@ public class PCConfigResource {
         }
     }
 
-    // --- NEW: Queue a manual ping from the Web UI ---
     @POST
     @Path("/ping/{machineId}")
     public Response triggerManualPing(@PathParam("machineId") String machineId) {
@@ -96,15 +95,29 @@ public class PCConfigResource {
         return Response.ok().build();
     }
 
-    // --- NEW: Command Queue for the Client Daemon ---
+    @POST
+    @Path("/ping/all")
+    public Response triggerGlobalPing() {
+        // Turn on the "Radio Broadcast" signal for 15 seconds.
+        // Since clients check in every 10 seconds, 15 seconds guarantees
+        // every single online client will hear it at least once.
+        globalPingExpirationTime = System.currentTimeMillis() + 15000;
+
+        return Response.ok("{\"message\": \"Global Ping Broadcast Activated for 15 seconds\"}").build();
+    }
+
     @GET
     @Path("/tasks/{machineId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPendingTasks(@PathParam("machineId") String machineId) {
-        // 1. Check for manual pings
+
+        // 1. Is the Global Radio Broadcast currently active?
+        boolean hasGlobalPing = System.currentTimeMillis() < globalPingExpirationTime;
+
+        // 2. Check for manual individual pings
         boolean hasManualPing = pendingPings.getOrDefault(machineId, false);
 
-        // 2. Check for automatic 30-minute interval pings
+        // 3. Check for automatic 30-minute interval pings
         boolean hasAutoPing = false;
         List<PCConfig> pcs = em.createQuery("SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
                 .setParameter("mid", machineId)
@@ -121,9 +134,10 @@ public class PCConfigResource {
             }
         }
 
-        // If either condition is true, issue a PING instruction
-        if (hasManualPing || hasAutoPing) {
-            pendingPings.put(machineId, false); // Clear the manual flag now that it's served
+        // If ANY of the three conditions are true, issue the PING instruction
+        if (hasGlobalPing || hasManualPing || hasAutoPing) {
+            // Clear the individual manual flag so we don't double-ping later
+            pendingPings.put(machineId, false);
             return Response.ok("{\"command\": \"PING\"}").build();
         }
 
@@ -163,7 +177,7 @@ public class PCConfigResource {
         }
         em.remove(existing);
 
-        notifyClients(); // <-- NEW: Push update to browsers
+        notifyClients();
 
         return Response.noContent().build(); // 204 No Content is standard for a successful delete
     }
