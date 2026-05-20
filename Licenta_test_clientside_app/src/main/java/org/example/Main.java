@@ -157,8 +157,25 @@ public class Main {
         }
     }
 
+    // --- UPGRADED METHOD: Uses Physical Motherboard UUID ---
     private static String getOrGenerateMachineId() {
-        File idFile = new File(".pc_agent_id"); // Storing in the working directory for easier daemon tracking
+        try {
+            SystemInfo systemInfo = new SystemInfo();
+            String hwUUID = systemInfo.getHardware().getComputerSystem().getHardwareUUID();
+
+            // Check if the motherboard returned a valid UUID (not empty, "unknown", or all F's)
+            if (hwUUID != null && !hwUUID.trim().isEmpty()
+                    && !hwUUID.equalsIgnoreCase("unknown")
+                    && !hwUUID.contains("FFFFFFFF")) {
+
+                return hwUUID; // Use the physical hardware ID
+            }
+        } catch (Exception e) {
+            System.err.println("Could not read hardware UUID. Falling back to file generation.");
+        }
+
+        // FALLBACK: Only used if hardware UUID fails (e.g., on some Virtual Machines)
+        File idFile = new File(".pc_agent_id");
         try {
             if (idFile.exists()) {
                 return new String(Files.readAllBytes(idFile.toPath())).trim();
