@@ -5,6 +5,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
+
 @Entity
 public class PCConfig {
 
@@ -23,6 +26,9 @@ public class PCConfig {
 
     @Column(name = "room_name")
     private String roomName;
+
+    @Column(name = "last_updated")
+    private java.time.LocalDateTime lastUpdated;
 
     public PCConfig() {}
 
@@ -59,4 +65,7 @@ public class PCConfig {
 
     public String getRoomName() { return roomName; }
     public void setRoomName(String roomName) { this.roomName = roomName; }
+
+    public LocalDateTime getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
 }

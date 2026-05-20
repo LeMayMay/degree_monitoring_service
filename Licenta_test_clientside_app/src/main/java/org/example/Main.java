@@ -31,35 +31,34 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("PC Agent Daemon Started.");
 
-        // 1. Send the initial payload on Startup
-        sendPayload("STARTUP");
+        // 1. Fetch the Machine ID once at startup to save disk read operations
+        String machineId = getOrGenerateMachineId();
+        System.out.println("Agent ID: " + machineId);
 
-        // 2. Register a Shutdown Hook
-        // This thread runs automatically when the OS sends a shutdown signal to the Java process
+        // 2. Send initial startup payload
+        sendPayload("STARTUP", machineId);
+
+        // 3. Register Shutdown Hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Shutdown signal received. Sending final payload...");
-            sendPayload("SHUTDOWN");
+            sendPayload("SHUTDOWN", machineId);
         }));
 
-        // 3. Keep the Daemon Alive (The "Heartbeat" Loop)
-        // This loop keeps the program running in the background invisibly.
+        // 4. Command Polling Loop
         while (true) {
             try {
-                // Sleep for 1 hour (3,600,000 ms).
-                // In the future, we will change this to poll the server every few seconds for "Pings".
-                Thread.sleep(3600000);
-
-                // Optionally send a periodic heartbeat update
-                // sendPayload("HEARTBEAT");
+                // Wait 10 seconds before asking the server for tasks again
+                Thread.sleep(10000);
+                checkForTasks(machineId);
 
             } catch (InterruptedException e) {
-                System.err.println("Daemon sleep interrupted.");
+                System.err.println("Daemon execution interrupted.");
                 break;
             }
         }
     }
 
-    private static void sendPayload(String eventType) {
+    // --- UPDATED: Now accepts machineId as a parameter ---
+    private static void sendPayload(String eventType, String machineId) {
         try {
             System.out.println("[" + eventType + "] Gathering system information...");
 
@@ -92,10 +91,9 @@ public class Main {
 
             String osVersion = os.getFamily() + " " + os.getVersionInfo().getVersion();
             String foundApps = getDetectedAntivirus();
-            String machineId = getOrGenerateMachineId();
 
             Map<String, Object> configData = new HashMap<>();
-            configData.put("machineId", machineId);
+            configData.put("machineId", machineId); // Uses the parameter passed in
             configData.put("hostname", hostname);
             configData.put("cpuModel", cpuInfo);
             configData.put("ramGb", ramGb);
@@ -103,13 +101,12 @@ public class Main {
             configData.put("graphicsCards", gpuInfo.toString().trim());
             configData.put("osVersion", osVersion);
             configData.put("antivirus", foundApps);
-            // You can also add configData.put("lastEvent", eventType); if you update your backend to accept it!
 
             Gson gson = new Gson();
             String jsonPayload = gson.toJson(configData);
 
             HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10)) // Don't hang forever if server is down
+                    .connectTimeout(Duration.ofSeconds(10))
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -123,12 +120,45 @@ public class Main {
 
         } catch (Exception e) {
             System.err.println("[" + eventType + "] Failed to send payload.");
-            e.printStackTrace();
+            // e.printStackTrace(); // Optional: comment out to prevent spamming the console on network loss
+        }
+    }
+
+    private static void checkForTasks(String machineId) {
+        try {
+            String taskUrl = SERVER_URL + "/tasks/" + machineId;
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5)) // Don't hang if server is down
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(taskUrl))
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                Gson gson = new Gson();
+                Map<?, ?> taskData = gson.fromJson(response.body(), Map.class);
+                String command = (String) taskData.get("command");
+
+                if ("PING".equals(command)) {
+                    System.out.println("[COMMAND] Ping request intercepted from server. Transmitting fresh inventory data...");
+                    // Transmit data and pass the machineId
+                    sendPayload("PING_RESPONSE", machineId);
+                }
+            }
+        } catch (Exception e) {
+            // Silently suppress network errors
+            // System.err.println("Failed to reach task queue: " + e.getMessage());
         }
     }
 
     private static String getOrGenerateMachineId() {
-        File idFile = new File(System.getProperty("user.home"), ".pc_agent_id");
+        File idFile = new File(".pc_agent_id"); // Storing in the working directory for easier daemon tracking
         try {
             if (idFile.exists()) {
                 return new String(Files.readAllBytes(idFile.toPath())).trim();
@@ -138,6 +168,7 @@ public class Main {
                 return newId;
             }
         } catch (Exception e) {
+            System.err.println("Could not read/write agent ID file. Generating temporary ID.");
             return UUID.randomUUID().toString();
         }
     }

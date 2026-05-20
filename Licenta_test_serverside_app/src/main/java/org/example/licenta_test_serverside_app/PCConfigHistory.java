@@ -30,6 +30,9 @@ public class PCConfigHistory {
     @Column(name = "room_name")
     private String roomName;
 
+    @Column(name = "last_updated")
+    private java.time.LocalDateTime lastUpdated;
+
     // Default constructor
     public PCConfigHistory() {}
 
@@ -73,4 +76,6 @@ public class PCConfigHistory {
     public void setMachineId(String machineId) { this.machineId = machineId; }
     public String getRoomName() { return roomName; }
     public void setRoomName(String roomName) { this.roomName = roomName; }
+    public LocalDateTime getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
 }

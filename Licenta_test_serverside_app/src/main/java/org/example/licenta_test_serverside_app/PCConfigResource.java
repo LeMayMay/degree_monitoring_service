@@ -18,6 +18,8 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON) // Applies JSON to all requests
 public class PCConfigResource {
 
+    private final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
+
     @PersistenceContext(unitName = "default")
     private EntityManager em;
 
@@ -53,6 +55,9 @@ public class PCConfigResource {
 
     @POST
     public Response addConfig(PCConfig incomingConfig) {
+        // Automatically attach the current timestamp to the payload
+        incomingConfig.setLastUpdated(java.time.LocalDateTime.now());
+
         List<PCConfig> existingList = em.createQuery(
                         "SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
                 .setParameter("mid", incomingConfig.getMachineId())
@@ -64,24 +69,65 @@ public class PCConfigResource {
             em.persist(historyEntry);
 
             existing.setHostname(incomingConfig.getHostname());
+            existing.setRoomName(incomingConfig.getRoomName());
             existing.setCpuModel(incomingConfig.getCpuModel());
             existing.setRamGb(incomingConfig.getRamGb());
             existing.setStorage(incomingConfig.getStorage());
             existing.setGraphicsCards(incomingConfig.getGraphicsCards());
             existing.setOsVersion(incomingConfig.getOsVersion());
             existing.setAntivirus(incomingConfig.getAntivirus());
+            existing.setLastUpdated(java.time.LocalDateTime.now()); // Update timestamp
 
             em.merge(existing);
-
-            notifyClients(); // <-- NEW: Push update to browsers
-
-            return Response.ok(existing).build(); // 200 OK
-
+            notifyClients();
+            return Response.ok(existing).build();
         } else {
             em.persist(incomingConfig);
-            notifyClients(); // <-- NEW: Push update to browsers
-            return Response.status(Response.Status.CREATED).entity(incomingConfig).build(); // 201 Created
+            notifyClients();
+            return Response.status(Response.Status.CREATED).entity(incomingConfig).build();
         }
+    }
+
+    // --- NEW: Queue a manual ping from the Web UI ---
+    @POST
+    @Path("/ping/{machineId}")
+    public Response triggerManualPing(@PathParam("machineId") String machineId) {
+        pendingPings.put(machineId, true);
+        return Response.ok().build();
+    }
+
+    // --- NEW: Command Queue for the Client Daemon ---
+    @GET
+    @Path("/tasks/{machineId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPendingTasks(@PathParam("machineId") String machineId) {
+        // 1. Check for manual pings
+        boolean hasManualPing = pendingPings.getOrDefault(machineId, false);
+
+        // 2. Check for automatic 30-minute interval pings
+        boolean hasAutoPing = false;
+        List<PCConfig> pcs = em.createQuery("SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
+                .setParameter("mid", machineId)
+                .getResultList();
+
+        if (!pcs.isEmpty() && pcs.get(0).getLastUpdated() != null) {
+            long minutesElapsed = java.time.Duration.between(
+                    pcs.get(0).getLastUpdated(),
+                    java.time.LocalDateTime.now()
+            ).toMinutes();
+
+            if (minutesElapsed >= 30) {
+                hasAutoPing = true;
+            }
+        }
+
+        // If either condition is true, issue a PING instruction
+        if (hasManualPing || hasAutoPing) {
+            pendingPings.put(machineId, false); // Clear the manual flag now that it's served
+            return Response.ok("{\"command\": \"PING\"}").build();
+        }
+
+        return Response.ok("{\"command\": \"NONE\"}").build();
     }
 
     @GET
