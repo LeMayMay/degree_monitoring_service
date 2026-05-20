@@ -20,8 +20,10 @@ public class PCConfigResource {
 
     private final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
 
-    // NEW: A timer for the Global Ping broadcast
     private volatile long globalPingExpirationTime = 0;
+
+    // NEW: Stores the last 50 events in memory
+    private final java.util.concurrent.ConcurrentLinkedDeque<String> eventLogs = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
     @PersistenceContext(unitName = "default")
     private EntityManager em;
@@ -46,11 +48,28 @@ public class PCConfigResource {
         broadcaster.register(eventSink);
     }
 
-    private void notifyClients() {
-        if (broadcaster != null && sse != null) {
-            // Push a simple text event named "refresh" to all connected browsers
-            broadcaster.broadcast(sse.newEvent("refresh"));
+    // NEW: Replaces notifyClients(). Logs the event and broadcasts it as JSON.
+    private void logEvent(String message) {
+        String time = java.time.LocalTime.now().withNano(0).toString();
+        String entry = "[" + time + "] " + message;
+
+        eventLogs.addFirst(entry);
+        if (eventLogs.size() > 50) {
+            eventLogs.removeLast();
         }
+
+        if (broadcaster != null && sse != null) {
+            // Send both the refresh command AND the log message in one JSON payload
+            String payload = "{\"action\":\"refresh\", \"log\":\"" + entry + "\"}";
+            broadcaster.broadcast(sse.newEvent(payload));
+        }
+    }
+
+    // NEW: Endpoint for the frontend to fetch logs on initial page load
+    @GET
+    @Path("/logs")
+    public Response getEventLogs() {
+        return Response.ok(eventLogs).build();
     }
 
     @POST
@@ -79,11 +98,11 @@ public class PCConfigResource {
             existing.setLastUpdated(java.time.LocalDateTime.now()); // Update timestamp
 
             em.merge(existing);
-            notifyClients();
+            logEvent("Saved configuration for PC: " + incomingConfig.getHostname());
             return Response.ok(existing).build();
         } else {
             em.persist(incomingConfig);
-            notifyClients();
+            logEvent("Saved configuration for PC: " + incomingConfig.getHostname());
             return Response.status(Response.Status.CREATED).entity(incomingConfig).build();
         }
     }
@@ -91,6 +110,7 @@ public class PCConfigResource {
     @POST
     @Path("/ping/{machineId}")
     public Response triggerManualPing(@PathParam("machineId") String machineId) {
+        logEvent("Queued manual ping for Agent ID: " + machineId);
         pendingPings.put(machineId, true);
         return Response.ok().build();
     }
@@ -101,6 +121,7 @@ public class PCConfigResource {
         // Turn on the "Radio Broadcast" signal for 15 seconds.
         // Since clients check in every 10 seconds, 15 seconds guarantees
         // every single online client will hear it at least once.
+        logEvent("Global Ping Broadcast Activated.");
         globalPingExpirationTime = System.currentTimeMillis() + 15000;
 
         return Response.ok("{\"message\": \"Global Ping Broadcast Activated for 15 seconds\"}").build();
@@ -163,7 +184,7 @@ public class PCConfigResource {
         updatedConfig.setId(id);
         em.merge(updatedConfig);
 
-        notifyClients(); // <-- NEW: Push update to browsers
+        logEvent("Updated Configuration.");
 
         return Response.ok(updatedConfig).build();
     }
@@ -177,7 +198,7 @@ public class PCConfigResource {
         }
         em.remove(existing);
 
-        notifyClients();
+        logEvent("Deleted a PC record from the database.");
 
         return Response.noContent().build(); // 204 No Content is standard for a successful delete
     }
@@ -201,9 +222,13 @@ public class PCConfigResource {
             String q = sqlQuery.trim().toUpperCase();
             if (q.startsWith("SELECT")) {
                 List<?> results = em.createNativeQuery(sqlQuery).getResultList();
+                logEvent("Executed custom SQL query.");
                 return Response.ok(results).build();
-            } else {
+            }
+            else
+            {
                 int rowsAffected = em.createNativeQuery(sqlQuery).executeUpdate();
+                logEvent("Executed custom SQL query.");
                 return Response.ok("{\"rowsAffected\": " + rowsAffected + "}").build();
             }
         } catch (Exception e) {
