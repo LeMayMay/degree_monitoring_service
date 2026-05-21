@@ -26,7 +26,7 @@ public class Main {
             "f-secure", "bullguard", "webroot", "panda security", "intego"
     ));
 
-    private static final String SERVER_URL = "http://192.168.1.135:8080/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs";
+    private static final String SERVER_URL = "http://192.168.1.133:8080/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs";
 
     public static void main(String[] args) {
         System.out.println("PC Agent Daemon Started.");

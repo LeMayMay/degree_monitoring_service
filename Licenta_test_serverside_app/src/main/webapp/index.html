@@ -4,82 +4,242 @@
     <meta charset="UTF-8">
     <title>PC Hardware Configurations</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1500px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; font-size: 0.9em; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .form-container { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px; }
-        .form-container input { margin-bottom: 10px; padding: 5px; width: 200px; }
-        .form-container button { padding: 5px 15px; cursor: pointer; }
-        button { cursor: pointer; padding: 4px 8px; margin-right: 5px; }
+
+        /* Tabs Styling */
+        .tab-bar { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; background: #eee; border: none; border-right: 1px solid #ccc; font-size: 1.1em; font-weight: bold; }
+        .tab-btn.active { background: #fff; border-top: 2px solid #4CAF50; border-left: 1px solid #ccc; border-right: 1px solid #ccc; margin-bottom: -2px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Room Header Styling */
+        .room-header { display: flex; justify-content: space-between; align-items: center; background: #e9ecef; padding: 10px; border-radius: 4px; margin-top: 20px;}
+
+        details { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 5px; }
+        summary { font-size: 1.2em; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        input, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { cursor: pointer; padding: 6px 12px; margin-top: 10px; margin-right: 5px; border: 1px solid #ccc; border-radius: 4px; background: #eee; }
+        button:hover { background: #ddd; }
+
+        #historyModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; width: 85%; margin: 50px auto; padding: 20px; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
+
+        #sqlConsole { width: 100%; height: 80px; font-family: monospace; }
+        #sqlResultArea { margin-top: 10px; background: #222; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; }
+
+        .agent-id { font-family: monospace; font-size: 0.85em; color: #555; }
+
+        /* Layout Grid */
+        .main-layout {
+            display: flex;
+            gap: 30px;
+            margin-left: 30px; /* This explicitly shifts the main content slightly to the right */
+        }
+        .left-content { flex: 3; min-width: 0; }
+        .right-sidebar { flex: 1; min-width: 300px; max-width: 400px; }
+
+        /* Event Log Styling */
+        .log-panel {
+            background: #2b2b2b;
+            color: #d4d4d4;
+            border-radius: 5px;
+            padding: 15px;
+            height: calc(100vh - 100px); /* Makes it stick to the screen height */
+            position: sticky;
+            top: 20px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .log-panel h3 { margin-top: 0; border-bottom: 1px solid #555; padding-bottom: 10px; color: #fff; }
+        #eventLogList { list-style: none; padding: 0; margin: 0; font-size: 0.85em; font-family: monospace; }
+        #eventLogList li { padding: 10px 0; border-bottom: 1px solid #444; line-height: 1.4; }
+        #eventLogList li:last-child { border-bottom: none; }
+        .log-highlight { color: #4CAF50; font-weight: bold; }
+
     </style>
 </head>
 <body>
 
-<h2>PC Configurations Management</h2>
+<h2>System Administration Panel</h2>
 
-<!-- CREATE / UPDATE FORM -->
-<div class="form-container">
-    <h3 id="formTitle">Add New PC Configuration</h3>
-    <form id="pcForm">
-        <!-- Hidden ID field to keep track of which item we are updating -->
-        <input type="hidden" id="pcId">
+<div class="main-layout">
 
-        <input type="text" id="hostname" placeholder="Hostname" required>
-        <input type="text" id="cpuModel" placeholder="CPU Model" required>
-        <input type="number" id="ramGb" placeholder="RAM (GB)" required>
-        <input type="text" id="storage" placeholder="Storage" required>
-        <input type="text" id="graphicsCards" placeholder="Graphics Cards">
-        <input type="text" id="osVersion" placeholder="OS Version" required>
-        <input type="text" id="antivirus" placeholder="Antivirus">
+    <div class="left-content">
 
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('dashboardTab', this)">All PCs (Main)</button>
+            <button class="tab-btn" onclick="switchTab('roomsTab', this)">Rooms Manager</button>
+        </div>
+
+        <div id="dashboardTab" class="tab-content active">
+
+            <details open>
+                <summary>SQL Command Console</summary>
+                <p style="color: red; margin-top: 0; font-size: 0.9em;"><b>Warning:</b> Executes directly against the database.</p>
+                <textarea id="sqlConsole" placeholder="SELECT * FROM pc_configs;"></textarea>
+                <br>
+                <button onclick="runSql()">Execute Query</button>
+                <div id="sqlResultArea">Results will appear here...</div>
+            </details>
+
+            <details id="formWrapper">
+                <summary id="formSummary">Add / Edit PC Configuration</summary>
+                <form id="pcForm">
+                    <input type="hidden" id="pcId">
+                    <div class="form-grid">
+                        <input type="text" id="machineId" placeholder="Machine ID (UUID)" required title="Must be unique for each PC">
+                        <input type="text" id="hostname" placeholder="Hostname" required>
+                        <input type="text" id="roomName" placeholder="Room Name (Optional)">
+                        <input type="text" id="cpuModel" placeholder="CPU Model" required>
+                        <input type="number" id="ramGb" placeholder="RAM (GB)" required>
+                        <input type="text" id="storage" placeholder="Storage" required>
+                        <input type="text" id="graphicsCards" placeholder="Graphics Cards">
+                        <input type="text" id="osVersion" placeholder="OS Version" required>
+                        <input type="text" id="antivirus" placeholder="Antivirus">
+                    </div>
+                    <button type="submit" style="background: #4CAF50; color: white;">Save Configuration</button>
+                    <button type="button" onclick="resetForm()">Cancel</button>
+                </form>
+            </details>
+
+            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">Connected PCs</h3>
+                <button onclick="pingAllPcs()" style="background: #ff9800; color: white; padding: 8px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    ⚡ Ping All PCs
+                </button>
+            </div>
+
+            <table id="configTable">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Agent ID</th>
+                    <th>Room</th>
+                    <th>Hostname</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>Storage</th>
+                    <th>GPU</th>
+                    <th>OS</th>
+                    <th>Antivirus</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div> <div id="roomsTab" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="newRoomInput" placeholder="Enter new room name...">
+            <button onclick="createNewRoom()" style="background: #4CAF50; color: white;">+ Create Room</button>
+        </div>
+        <div id="roomsContainer"></div>
+    </div>
+
+    </div> <div class="right-sidebar">
+    <div class="log-panel">
+        <h3>📝 Live Event Log</h3>
+        <ul id="eventLogList">
+            <li>Loading logs...</li>
+        </ul>
+    </div>
+</div> </div> <div id="assignModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+    <div class="modal-content" style="background:white; width:85%; margin:50px auto; padding:20px; border-radius:8px; max-height:80vh; overflow-y:auto;">
+        <h3>Assign PCs to <span id="assignRoomNameTarget" style="color: #4CAF50;"></span></h3>
+        <table id="assignTable" style="width:100%; border-collapse:collapse;">
+            <thead>
+            <tr><th style="border:1px solid #ddd; padding:8px;">Select</th><th style="border:1px solid #ddd; padding:8px;">Current Room</th><th style="border:1px solid #ddd; padding:8px;">Hostname</th><th style="border:1px solid #ddd; padding:8px;">Agent ID</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
         <br>
-        <button type="submit" id="saveBtn">Save Configuration</button>
-        <button type="button" onclick="resetForm()">Cancel</button>
-    </form>
+        <button onclick="saveRoomAssignments()" style="background: #4CAF50; color: white; padding:8px; cursor:pointer;">Save Assignments</button>
+        <button onclick="closeModal('assignModal')" style="padding:8px; cursor:pointer;">Cancel</button>
+    </div>
 </div>
 
-<!-- DATA TABLE -->
-<table id="configTable">
-    <thead>
-    <tr>
-        <th>ID</th>
-        <th>Hostname</th>
-        <th>CPU Model</th>
-        <th>RAM (GB)</th>
-        <th>Storage</th>
-        <th>Graphics Cards</th>
-        <th>OS Version</th>
-        <th>Installed Antivirus</th>
-        <th>Actions</th> <!-- New Actions Column -->
-    </tr>
-    </thead>
-    <tbody>
-    </tbody>
-</table>
+<div id="historyModal" class="modal">
+    <div class="modal-content">
+        <h3>History: <span id="historyHostname"></span></h3>
+        <table id="historyTable">
+            <thead>
+            <tr>
+                <th>Saved At</th>
+                <th>Room</th>
+                <th>Hostname</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Storage</th>
+                <th>GPU</th>
+                <th>OS</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button onclick="closeModal('historyModal')" style="margin-top:15px; padding:8px;">Close</button>
+    </div>
+</div>
 
 <script>
-    const apiUrl = '/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs';
-    let pcData = []; // Store the data globally so we can access it for editing
-
-    // 1. READ: Fetch and display the data
-    function loadConfigs() {
-        fetch(apiUrl)
-            .then(response => response.json())
-            .then(data => {
-                pcData = data;
-                renderTable();
-            })
-            .catch(error => console.error('Error fetching data:', error));
+    function loadLogs() {
+        fetch(`${apiUrl}/logs`)
+            .then(res => res.json())
+            .then(logs => {
+                const ul = document.getElementById('eventLogList');
+                ul.innerHTML = '';
+                if (logs.length === 0) {
+                    ul.innerHTML = '<li style="color:#888;">No recent events.</li>';
+                } else {
+                    logs.forEach(log => {
+                        ul.insertAdjacentHTML('beforeend', `<li><span class="log-highlight">></span> ${log}</li>`);
+                    });
+                }
+            }).catch(err => console.error("Error loading logs:", err));
     }
 
-    function renderTable() {
-        const tbody = document.querySelector('#configTable tbody');
-        tbody.innerHTML = ''; // Clear existing rows
+    const apiUrl = '/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs';
+    let pcData = [];
 
-        pcData.forEach(pc => {
+    let customRooms = new Set();
+
+    function switchTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btnElement.classList.add('active');
+
+        if(tabId === 'roomsTab') renderRoomsView();
+    }
+
+    // --- MAIN CRUD OPERATIONS ---
+    function loadConfigs() {
+        fetch(apiUrl)
+            .then(res => res.json())
+            .then(data => {
+                pcData = data;
+                renderMainTable();
+            }).catch(err => console.error('Error fetching data:', err));
+    }
+
+    function renderMainTable() {
+        const tbody = document.querySelector('#configTable tbody');
+        tbody.innerHTML = '';
+
+        // 1. Add 'index' to the forEach loop parameters
+        pcData.forEach((pc, index) => {
+
             const row = `<tr>
-                    <td>${pc.id || ''}</td>
+                    <td>${index + 1}</td>
+
+                    <td class="agent-id">${pc.machineId || 'N/A'}</td>
+                    <td><b>${pc.roomName || '<i>Unassigned</i>'}</b></td>
                     <td>${pc.hostname}</td>
                     <td>${pc.cpuModel}</td>
                     <td>${pc.ramGb}</td>
@@ -88,7 +248,9 @@
                     <td>${pc.osVersion}</td>
                     <td>${pc.antivirus}</td>
                     <td>
+                        <button onclick="pingPc('${pc.machineId}', '${pc.hostname}')" style="background: #008CBA; color: white; border-color: #007B9E;">Ping</button>
                         <button onclick="editPc(${pc.id})">Edit</button>
+                        <button onclick="openHistory('${pc.machineId}', '${pc.hostname}')">History</button>
                         <button onclick="deletePc(${pc.id})" style="color: red;">Delete</button>
                     </td>
                 </tr>`;
@@ -96,16 +258,147 @@
         });
     }
 
-    // 2. CREATE & UPDATE: Handle form submission
-    document.getElementById('pcForm').addEventListener('submit', function(e) {
-        e.preventDefault(); // Prevent page reload
+    function renderRoomsView() {
+        const container = document.getElementById('roomsContainer');
+        container.innerHTML = '';
 
+        pcData.forEach(pc => {
+            if (pc.roomName && pc.roomName.trim() !== '') {
+                customRooms.add(pc.roomName);
+            }
+        });
+
+        if (customRooms.size === 0) {
+            container.innerHTML = '<p>No rooms created yet.</p>';
+            return;
+        }
+
+        customRooms.forEach(room => {
+            const pcsInRoom = pcData.filter(pc => pc.roomName === room);
+            let tableHtml = `<table style="margin-top: 10px; width:100%; border-collapse:collapse;">
+                <thead><tr><th style="border:1px solid #ddd; padding:8px;">Hostname</th><th style="border:1px solid #ddd; padding:8px;">Agent ID</th><th style="border:1px solid #ddd; padding:8px;">CPU</th><th style="border:1px solid #ddd; padding:8px;">Actions</th></tr></thead><tbody>`;
+
+            if (pcsInRoom.length === 0) {
+                tableHtml += `<tr><td colspan="4" style="text-align:center; color:#888;">Room is empty</td></tr>`;
+            } else {
+                pcsInRoom.forEach(pc => {
+                    tableHtml += `<tr>
+                        <td style="border:1px solid #ddd; padding:8px;">${pc.hostname}</td>
+                        <td style="border:1px solid #ddd; padding:8px;" class="agent-id">${pc.machineId}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">${pc.cpuModel}</td>
+                        <td style="border:1px solid #ddd; padding:8px;"><button onclick="removePcFromRoom(${pc.id})">Remove</button></td>
+                    </tr>`;
+                });
+            }
+            tableHtml += `</tbody></table>`;
+
+            container.insertAdjacentHTML('beforeend', `
+                <div style="border: 1px solid #ccc; margin-bottom: 20px; border-radius: 5px; padding: 15px; background: #fff;">
+                    <div class="room-header">
+                        <h3 style="margin: 0;">${room} <span style="font-size:0.6em; color:#666;">(${pcsInRoom.length} PCs)</span></h3>
+                        <div>
+                            <button onclick="openAssignModal('${room}')" style="background:#008CBA; color:white; padding:6px; border:none; border-radius:4px; cursor:pointer;">Assign PCs</button>
+                            <button onclick="deleteRoom('${room}')" style="background:#f44336; color:white; padding:6px; border:none; border-radius:4px; cursor:pointer; margin-left: 5px;">Delete Room</button>
+                        </div>
+                    </div>${tableHtml}
+                </div>`);
+        });
+    }
+
+    function createNewRoom() {
+        const input = document.getElementById('newRoomInput');
+        if (input.value.trim()) { customRooms.add(input.value.trim()); input.value = ''; renderRoomsView(); }
+    }
+
+    function deleteRoom(roomName) {
+        if (!confirm(`Are you sure you want to delete '${roomName}'? All PCs inside will be unassigned.`)) return;
+
+        customRooms.delete(roomName);
+
+        const pcsToUpdate = pcData.filter(pc => pc.roomName === roomName);
+
+        if (pcsToUpdate.length === 0) {
+            renderRoomsView();
+            return;
+        }
+
+        const updatePromises = pcsToUpdate.map(pc => {
+            return fetch(`${apiUrl}/${pc.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...pc, roomName: '' })
+            });
+        });
+
+        Promise.all(updatePromises).then(() => loadConfigs());
+    }
+
+    let currentAssigningRoom = '';
+    function openAssignModal(roomName) {
+        currentAssigningRoom = roomName;
+        document.getElementById('assignRoomNameTarget').innerText = roomName;
+        const tbody = document.querySelector('#assignTable tbody');
+        tbody.innerHTML = '';
+        const availablePcs = pcData.filter(pc => pc.roomName !== roomName);
+
+        if(availablePcs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="border:1px solid #ddd; padding:8px;">All available PCs are already in this room.</td></tr>`;
+        } else {
+            availablePcs.forEach(pc => {
+                tbody.insertAdjacentHTML('beforeend', `<tr><td style="border:1px solid #ddd; padding:8px;"><input type="checkbox" class="pc-assign-cb" value="${pc.id}"></td><td style="border:1px solid #ddd; padding:8px;">${pc.roomName || 'Unassigned'}</td><td style="border:1px solid #ddd; padding:8px;">${pc.hostname}</td><td style="border:1px solid #ddd; padding:8px;">${pc.machineId}</td></tr>`);
+            });
+        }
+        document.getElementById('assignModal').style.display = 'block';
+    }
+
+    function saveRoomAssignments() {
+        const checkboxes = document.querySelectorAll('.pc-assign-cb:checked');
+        if (checkboxes.length === 0) {
+            closeModal('assignModal');
+            return;
+        }
+
+        const updatePromises = Array.from(checkboxes).map(cb => {
+            const pcId = parseInt(cb.value);
+            const pc = pcData.find(p => p.id === pcId);
+
+            return fetch(`${apiUrl}/${pcId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...pc, roomName: currentAssigningRoom })
+            });
+        });
+
+        Promise.all(updatePromises)
+            .then(() => {
+                closeModal('assignModal');
+                loadConfigs();
+            })
+            .catch(err => alert("Error assigning PCs: " + err));
+    }
+
+    function removePcFromRoom(pcId) {
+        const pc = pcData.find(p => p.id === pcId);
+
+        fetch(`${apiUrl}/${pcId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...pc, roomName: '' })
+        })
+            .then(() => loadConfigs())
+            .catch(err => alert("Error removing PC: " + err));
+    }
+
+    document.getElementById('pcForm').addEventListener('submit', function(e) {
+        e.preventDefault();
         const id = document.getElementById('pcId').value;
-        const method = id ? 'PUT' : 'POST'; // If ID exists, it's an Update. Otherwise, Create.
+        const method = id ? 'PUT' : 'POST';
         const targetUrl = id ? `${apiUrl}/${id}` : apiUrl;
 
         const payload = {
+            machineId: document.getElementById('machineId').value,
             hostname: document.getElementById('hostname').value,
+            roomName: document.getElementById('roomName').value,
             cpuModel: document.getElementById('cpuModel').value,
             ramGb: parseInt(document.getElementById('ramGb').value),
             storage: document.getElementById('storage').value,
@@ -114,35 +407,31 @@
             antivirus: document.getElementById('antivirus').value
         };
 
-        // Add ID to payload if updating
-        if (id) payload.id = parseInt(id);
-
         fetch(targetUrl, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        })
-            .then(response => {
-                if (response.ok) {
-                    resetForm();
-                    loadConfigs(); // Refresh the table
-                } else {
-                    console.error('Failed to save configuration');
-                }
-            })
-            .catch(error => console.error('Error saving data:', error));
+        }).then(res => {
+            if (res.ok) {
+                resetForm();
+                loadConfigs();
+            } else {
+                alert('Failed to save. Ensure Machine ID is unique.');
+            }
+        });
     });
 
-    // Populate form with existing data for Update
     function editPc(id) {
         const pc = pcData.find(item => item.id === id);
         if (!pc) return;
 
-        document.getElementById('formTitle').innerText = "Edit PC Configuration";
+        document.getElementById('formWrapper').open = true;
+        document.getElementById('formSummary').innerText = "Edit PC Configuration (ID: " + id + ")";
+
         document.getElementById('pcId').value = pc.id;
+        document.getElementById('machineId').value = pc.machineId || '';
         document.getElementById('hostname').value = pc.hostname;
+        document.getElementById('roomName').value = pc.roomName || '';
         document.getElementById('cpuModel').value = pc.cpuModel;
         document.getElementById('ramGb').value = pc.ramGb;
         document.getElementById('storage').value = pc.storage;
@@ -151,32 +440,204 @@
         document.getElementById('antivirus').value = pc.antivirus;
     }
 
-    // 3. DELETE: Remove a configuration
     function deletePc(id) {
-        if (!confirm('Are you sure you want to delete this configuration?')) return;
-
-        fetch(`${apiUrl}/${id}`, {
-            method: 'DELETE'
-        })
-            .then(response => {
-                if (response.ok) {
-                    loadConfigs(); // Refresh the table after deletion
-                } else {
-                    console.error('Failed to delete configuration');
-                }
-            })
-            .catch(error => console.error('Error deleting data:', error));
+        if (confirm('Delete this configuration?')) {
+            fetch(`${apiUrl}/${id}`, { method: 'DELETE' }).then(() => loadConfigs());
+        }
     }
 
-    // Helper to clear the form
+    // --- REAL PING OPERATION ---
+    function pingPc(machineId, hostname) {
+        if (!machineId || machineId === 'null' || machineId === 'undefined') {
+            alert('Cannot ping: This record has no Agent ID.');
+            return;
+        }
+
+        fetch(`${apiUrl}/ping/${machineId}`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    alert(`Ping command successfully queued for ${hostname}. It will execute on the next client cycle.`);
+                } else {
+                    alert('Failed to queue ping command.');
+                }
+            })
+            .catch(err => console.error('Error queuing ping:', err));
+    }
+
+    // --- GLOBAL PING OPERATION ---
+    function pingAllPcs() {
+        if (!confirm("Are you sure you want to ping ALL registered PCs? This will trigger a network-wide inventory update.")) return;
+
+        fetch(`${apiUrl}/ping/all`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    throw new Error("Server rejected the request.");
+                }
+            })
+            .then(data => {
+                alert(`Global Ping successful! Queued commands for ${data.queued || 'active clients'}.\n\nOnline clients will respond within 10 seconds.`);
+            })
+            .catch(err => {
+                console.error('Error queuing global ping:', err);
+                alert('Failed to execute global ping.');
+            });
+    }
+
     function resetForm() {
         document.getElementById('pcForm').reset();
         document.getElementById('pcId').value = '';
-        document.getElementById('formTitle').innerText = "Add New PC Configuration";
+        document.getElementById('formSummary').innerText = "Add / Edit PC Configuration";
+        document.getElementById('formWrapper').open = false;
     }
 
-    // Initial load
+    // --- HISTORY OPERATIONS ---
+    function openHistory(machineId, hostname) {
+        if (!machineId || machineId === 'null' || machineId === 'undefined') {
+            alert('This record has no Agent ID. History cannot be retrieved.');
+            return;
+        }
+
+        const livePc = pcData.find(item => item.machineId === machineId);
+        if (!livePc) {
+            alert('Cannot find live PC data.');
+            return;
+        }
+
+        document.getElementById('historyHostname').innerText = hostname;
+
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = '<tr><td colspan="9">Loading...</td></tr>';
+        document.getElementById('historyModal').style.display = 'block';
+
+        fetch(`${apiUrl}/history/${machineId}`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9">No history found for this Machine ID.</td></tr>';
+                    return;
+                }
+
+                const highlightDiff = (histVal, liveVal, fallback = '') => {
+                    const h = histVal || fallback;
+                    const l = liveVal || fallback;
+                    if (h != l) {
+                        return `<span style="color: #f44336; font-weight: bold;" title="Current Live Value: ${l}">${h}</span>`;
+                    }
+                    return h;
+                };
+
+                data.forEach(hist => {
+                    const dateStr = hist.savedAt ? new Date(hist.savedAt).toLocaleString() : 'Unknown';
+                    const histJson = encodeURIComponent(JSON.stringify(hist));
+
+                    const row = `<tr>
+                        <td>${dateStr}</td>
+                        <td>${highlightDiff(hist.roomName, livePc.roomName, '<i>Unassigned</i>')}</td>
+                        <td>${highlightDiff(hist.hostname, livePc.hostname)}</td>
+                        <td>${highlightDiff(hist.cpuModel, livePc.cpuModel)}</td>
+                        <td>${highlightDiff(hist.ramGb, livePc.ramGb)}</td>
+                        <td>${highlightDiff(hist.storage, livePc.storage)}</td>
+                        <td>${highlightDiff(hist.graphicsCards, livePc.graphicsCards)}</td>
+                        <td>${highlightDiff(hist.osVersion, livePc.osVersion)}</td>
+                        <td><button onclick="restoreHistory('${histJson}')">Restore</button></td>
+                    </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                });
+            });
+    }
+
+    function restoreHistory(histJsonStr) {
+        const hist = JSON.parse(decodeURIComponent(histJsonStr));
+        closeModal('historyModal');
+
+        const currentLivePc = pcData.find(item => item.machineId === hist.machineId);
+        if(!currentLivePc) return alert("Cannot restore: Current PC record no longer exists.");
+
+        document.getElementById('formWrapper').open = true;
+        document.getElementById('formSummary').innerText = "Restoring Configuration (Review and Save)";
+
+        document.getElementById('pcId').value = currentLivePc.id;
+        document.getElementById('machineId').value = hist.machineId;
+        document.getElementById('hostname').value = hist.hostname;
+        document.getElementById('cpuModel').value = hist.cpuModel;
+        document.getElementById('ramGb').value = hist.ramGb;
+        document.getElementById('storage').value = hist.storage;
+        document.getElementById('graphicsCards').value = hist.graphicsCards;
+        document.getElementById('osVersion').value = hist.osVersion;
+        document.getElementById('antivirus').value = hist.antivirus || '';
+    }
+
+    function closeModal(modalId) {
+        if(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        } else {
+            // Fallback for previous function call signature
+            document.getElementById('historyModal').style.display = 'none';
+            document.getElementById('assignModal').style.display = 'none';
+        }
+    }
+
+    // --- SQL CONSOLE OPERATIONS ---
+    function runSql() {
+        const sql = document.getElementById('sqlConsole').value;
+        const resultArea = document.getElementById('sqlResultArea');
+
+        if (!sql.trim()) return;
+        resultArea.innerText = "Executing...";
+
+        fetch(`${apiUrl}/query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: sql
+        })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(res => {
+                if (res.status === 200) {
+                    resultArea.innerText = JSON.stringify(res.body, null, 2);
+                    loadConfigs();
+                } else {
+                    resultArea.innerText = "ERROR:\n" + (res.body.error || JSON.stringify(res.body));
+                }
+            })
+            .catch(err => {
+                resultArea.innerText = "Network/Parse Error:\n" + err;
+            });
+    }
+
+    // --- REAL-TIME UPDATES (SSE) ---
     loadConfigs();
+    loadLogs();
+
+    const evtSource = new EventSource(`${apiUrl}/stream`);
+
+    evtSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.log) {
+                const ul = document.getElementById('eventLogList');
+                if (ul.innerHTML.includes('No recent events')) ul.innerHTML = '';
+                ul.insertAdjacentHTML('afterbegin', `<li><span class="log-highlight">></span> ${data.log}</li>`);
+            }
+
+            if (data.action === 'refresh') {
+                const isEditing = document.getElementById('formWrapper').open;
+                const isHistoryOpen = document.getElementById('historyModal').style.display === 'block';
+                if (!isEditing && !isHistoryOpen) {
+                    loadConfigs();
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse SSE message:", e);
+        }
+    };
+
+    evtSource.onerror = function(err) {
+        console.error("Lost real-time connection to server. Auto-reconnecting...");
+    };
 </script>
 </body>
 </html>
