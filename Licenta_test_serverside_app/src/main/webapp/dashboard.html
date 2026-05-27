@@ -4,97 +4,187 @@
     <meta charset="UTF-8">
     <title>PC Hardware Configurations</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1500px; margin: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; font-size: 0.9em; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        :root {
+            --gh-bg: #f6f8fa;
+            --gh-border: #d0d7de;
+            --gh-text: #24292f;
+            --gh-text-muted: #57606a;
+            --gh-link: #0969da;
+            --gh-btn-bg: #f6f8fa;
+            --gh-btn-border: rgba(27,31,36,0.15);
+            --gh-btn-hover: #f3f4f6;
+            --gh-primary: #2da44e;
+            --gh-primary-hover: #2c974b;
+            --gh-danger: #cf222e;
+            --gh-header: #24292f;
+            --gh-code-bg: #0d1117;
+            --gh-code-text: #e6edf3;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: var(--gh-bg);
+            color: var(--gh-text);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Top Header */
+        .header {
+            background-color: var(--gh-header);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 24px;
+        }
+        .header h2 { margin: 0; font-size: 20px; font-weight: 600; color: white; display: flex; align-items: center; gap: 8px;}
+        .header button {
+            background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white;
+            padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;
+        }
+        .header button:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+
+        /* Layout */
+        .main-layout {
+            display: flex;
+            gap: 24px;
+            max-width: 1500px;
+            margin: auto;
+            padding: 0 32px 32px 32px;
+        }
+        .left-content {
+            flex: 3;
+            min-width: 0;
+            background: white;
+            border: 1px solid var(--gh-border);
+            border-radius: 6px;
+            padding: 24px;
+        }
+        .right-sidebar { flex: 1; min-width: 300px; max-width: 350px; }
+
+        /* Buttons Standard */
+        button {
+            background-color: var(--gh-btn-bg); color: var(--gh-text);
+            border: 1px solid var(--gh-btn-border); border-radius: 6px;
+            padding: 5px 12px; font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: 0.2s cubic-bezier(0.3, 0, 0.5, 1);
+        }
+        button:hover { background-color: var(--gh-btn-hover); }
+        button.btn-primary { background-color: var(--gh-primary); color: white; border-color: rgba(27,31,36,0.15); }
+        button.btn-primary:hover { background-color: var(--gh-primary-hover); }
+        button.btn-danger { color: var(--gh-danger); }
+        button.btn-danger:hover { background-color: var(--gh-danger); color: white; }
+        button.btn-blue { background-color: var(--gh-link); color: white; }
+        button.btn-blue:hover { background-color: #035fc7; }
+
+        /* Inputs & Forms */
+        input, textarea, select {
+            padding: 5px 12px; font-size: 14px;
+            border: 1px solid var(--gh-border); border-radius: 6px; background-color: var(--gh-bg);
+            color: var(--gh-text); font-family: inherit; line-height: 20px;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--gh-link); box-shadow: inset 0 0 0 1px var(--gh-link); background: white;
+        }
 
         /* Tabs Styling */
-        .tab-bar { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; background: #eee; border: none; border-right: 1px solid #ccc; font-size: 1.1em; font-weight: bold; }
-        .tab-btn.active { background: #fff; border-top: 2px solid #4CAF50; border-left: 1px solid #ccc; border-right: 1px solid #ccc; margin-bottom: -2px; }
+        .tab-bar {
+            display: flex; gap: 8px; border-bottom: 1px solid var(--gh-border); margin-bottom: 24px;
+        }
+        .tab-btn {
+            background: transparent; border: 1px solid transparent; border-bottom: none;
+            padding: 8px 16px; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 14px; color: var(--gh-text-muted);
+        }
+        .tab-btn:hover { background: #eaeef2; }
+        .tab-btn.active {
+            background: white; border-color: var(--gh-border); border-bottom-color: transparent;
+            font-weight: 600; color: var(--gh-text); position: relative; top: 1px;
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Room Header Styling */
-        .room-header { display: flex; justify-content: space-between; align-items: center; background: #e9ecef; padding: 10px; border-radius: 4px; margin-top: 20px;}
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 24px; font-size: 13px; }
+        th, td { border-bottom: 1px solid var(--gh-border); padding: 10px 12px; text-align: left; }
+        th { background-color: var(--gh-bg); font-weight: 600; color: var(--gh-text-muted); border-top: 1px solid var(--gh-border); border-bottom: 1px solid var(--gh-border); }
+        tr:last-child td { border-bottom: none; }
+        td button { margin-right: 4px; padding: 4px 8px; font-size: 12px;}
 
-        details { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 5px; }
-        summary { font-size: 1.2em; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-        input, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        button { cursor: pointer; padding: 6px 12px; margin-top: 10px; margin-right: 5px; border: 1px solid #ccc; border-radius: 4px; background: #eee; }
-        button:hover { background: #ddd; }
-
-        #historyModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { background: white; width: 85%; margin: 50px auto; padding: 20px; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
-
-        #sqlConsole { width: 100%; height: 80px; font-family: monospace; }
-        #sqlResultArea { margin-top: 10px; background: #222; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; }
-
-        .agent-id { font-family: monospace; font-size: 0.85em; color: #555; }
-
-        /* Layout Grid */
-        .main-layout {
-            display: flex;
-            gap: 30px;
-            margin-left: 30px; /* This explicitly shifts the main content slightly to the right */
+        /* Details & Wrappers */
+        details { border: 1px solid var(--gh-border); margin-bottom: 16px; border-radius: 6px; }
+        summary {
+            font-size: 14px; font-weight: 600; cursor: pointer; padding: 12px 16px;
+            background: var(--gh-bg); border-radius: 6px; list-style: none; display: flex; align-items: center;
         }
-        .left-content { flex: 3; min-width: 0; }
-        .right-sidebar { flex: 1; min-width: 300px; max-width: 400px; }
+        summary::-webkit-details-marker { display: none; }
+        summary::before { content: "▶"; font-size: 10px; margin-right: 8px; transition: 0.2s; color: var(--gh-text-muted); }
+        details[open] summary { border-bottom: 1px solid var(--gh-border); border-radius: 6px 6px 0 0; }
+        details[open] summary::before { transform: rotate(90deg); }
+        .details-body { padding: 16px; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
 
         /* Event Log Styling */
         .log-panel {
-            background: #2b2b2b;
-            color: #d4d4d4;
-            border-radius: 5px;
-            padding: 15px;
-            height: calc(100vh - 100px); /* Makes it stick to the screen height */
+            background: var(--gh-code-bg);
+            color: var(--gh-code-text);
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            height: calc(100vh - 120px);
             position: sticky;
-            top: 20px;
-            overflow-y: auto;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            top: 24px;
+            display: flex;
+            flex-direction: column;
         }
-        .log-panel h3 { margin-top: 0; border-bottom: 1px solid #555; padding-bottom: 10px; color: #fff; }
-        #eventLogList { list-style: none; padding: 0; margin: 0; font-size: 0.85em; font-family: monospace; }
-        #eventLogList li { padding: 10px 0; border-bottom: 1px solid #444; line-height: 1.4; }
+        .log-panel h3 { margin: 0; padding: 16px; border-bottom: 1px solid #30363d; font-size: 14px; font-weight: 600; }
+        #eventLogList { list-style: none; padding: 16px; margin: 0; font-size: 12px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; overflow-y: auto; flex-grow: 1; }
+        #eventLogList li { padding: 4px 0; border-bottom: 1px solid #21262d; line-height: 1.5; }
         #eventLogList li:last-child { border-bottom: none; }
-        .log-highlight { color: #4CAF50; font-weight: bold; }
+        .log-highlight { color: #56d364; font-weight: bold; margin-right: 8px; }
 
+        /* SQL Console */
+        #sqlConsole { width: 100%; height: 80px; font-family: monospace; margin-top: 10px; box-sizing: border-box; }
+        #sqlResultArea { margin-top: 16px; background: var(--gh-code-bg); color: #56d364; padding: 16px; border-radius: 6px; font-family: monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap; border: 1px solid #30363d;}
+
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(36,41,47,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-content { background: white; width: 90%; max-width: 900px; padding: 24px; border-radius: 6px; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 24px rgba(140,149,159,0.2); margin: 5vh auto; }
+        .modal-content h3 { margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--gh-border); padding-bottom: 12px; margin-bottom: 16px;}
+
+        .agent-id { font-family: monospace; font-size: 12px; color: var(--gh-text-muted); background: var(--gh-bg); padding: 2px 6px; border-radius: 4px; }
+        .room-header { display: flex; justify-content: space-between; align-items: center; background: var(--gh-bg); padding: 12px 16px; border-radius: 6px; margin-top: 24px; border: 1px solid var(--gh-border); border-bottom: none; border-radius: 6px 6px 0 0;}
+        .room-table-container { border: 1px solid var(--gh-border); border-top: none; border-radius: 0 0 6px 6px; padding: 0 16px; margin-bottom: 24px;}
+        .room-table-container table { margin-top: 0;}
     </style>
 </head>
 <body>
 
-<button onclick="logout()" style="float: right; background: #f44336; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;">🚪 Logout</button>
-<h2>System Administration Panel</h2>
+<div class="header">
+    <h2><svg height="24" aria-hidden="true" viewBox="0 0 16 16" version="1.1" width="24" data-view-component="true" style="fill: white;"><path d="M2 1.75C2 .784 2.784 0 3.75 0h8.5C13.216 0 14 .784 14 1.75v12.5A1.75 1.75 0 0 1 12.25 16h-8.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25ZM8 13a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path><path d="M5 4.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5ZM5 7a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5A.5.5 0 0 1 5 7Z"></path></svg> System Administration</h2>
+    <button onclick="logout()">Sign out</button>
+</div>
 
 <div class="main-layout">
-
     <div class="left-content">
-
         <div class="tab-bar">
-            <button class="tab-btn active" onclick="switchTab('dashboardTab', this)">All PCs (Main)</button>
+            <button class="tab-btn active" onclick="switchTab('dashboardTab', this)">All PCs</button>
             <button class="tab-btn" onclick="switchTab('roomsTab', this)">Rooms Manager</button>
         </div>
 
         <div id="dashboardTab" class="tab-content active">
-
-            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0;">Connected PCs</h3>
-                <div style="display: flex; align-items: center; gap: 15px;">
-
-                    <div>
-                        <label for="roomFilter" style="font-size: 0.9em; font-weight: bold; color: #555;">Filter by Room:</label>
-                        <select id="roomFilter" onchange="renderMainTable()" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; background: #fff;">
+            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Connected Infrastructure</h3>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="roomFilter" style="font-size: 13px; font-weight: 600; color: var(--gh-text-muted);">Filter Room:</label>
+                        <select id="roomFilter" onchange="renderMainTable()">
                             <option value="ALL">All Rooms</option>
                             <option value="UNASSIGNED">Unassigned Only</option>
                         </select>
                     </div>
-
-                    <button onclick="pingAllPcs()" style="background: #ff9800; color: white; padding: 8px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                        ⚡ Ping All PCs
-                    </button>
+                    <button class="btn-primary" onclick="pingAllPcs()">⚡ Ping All Hosts</button>
                 </div>
             </div>
 
@@ -117,83 +207,100 @@
                 <tbody></tbody>
             </table>
 
-            <details open>
+            <details>
                 <summary>SQL Command Console</summary>
-                <p style="color: red; margin-top: 0; font-size: 0.9em;"><b>Warning:</b> Executes directly against the database.</p>
+                <div class="details-body">
+                    <p style="color: var(--gh-danger); margin-top: 0; font-size: 13px;"><b>Warning:</b> Executes directly against the production database.</p>
 
-                <div style="margin-bottom: 10px;">
-                    <label for="sqlTemplates" style="font-size: 0.9em; font-weight: bold; color: #555;">Load Sample Query: </label>
-                    <select id="sqlTemplates" onchange="loadSqlTemplate()" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; width: 300px;">
-                        <option value="">-- Select a sample to load --</option>
-                        <option value="SELECT * FROM PCConfig">View all PCs</option>
-                        <option value="SELECT * FROM PCConfig WHERE ramGb >= 16">High RAM (16GB or more)</option>
-                        <option value="SELECT * FROM PCConfig WHERE osVersion LIKE '%Windows 11%'">Filter by OS (Windows 11)</option>
-                        <option value="SELECT * FROM PCConfig WHERE room_name IS NULL OR room_name = 'Unassigned'">Unassigned PCs (No Room)</option>
-                        <option value="SELECT * FROM PCConfig WHERE antivirus LIKE '%Defender%'">PCs using Windows Defender</option>
-                    </select>
-                </div>
-
-                <textarea id="sqlConsole" placeholder="SELECT * FROM PCConfig"></textarea>
-                <br>
-                <button onclick="runSql()">Execute Query</button>
-                <button onclick="document.getElementById('sqlConsole').value = '';" style="background: #fff;">Clear</button>
-                <div id="sqlResultArea">Results will appear here...</div>
-            </details>
-            <details id="formWrapper">
-                <summary id="formSummary">Add / Edit PC Configuration</summary>
-                <form id="pcForm">
-                    <input type="hidden" id="pcId">
-                    <div class="form-grid">
-                        <input type="text" id="machineId" placeholder="Machine ID (UUID)" required title="Must be unique for each PC">
-                        <input type="text" id="hostname" placeholder="Hostname" required>
-                        <input type="text" id="roomName" placeholder="Room Name (Optional)">
-                        <input type="text" id="cpuModel" placeholder="CPU Model" required>
-                        <input type="number" id="ramGb" placeholder="RAM (GB)" required>
-                        <input type="text" id="storage" placeholder="Storage" required>
-                        <input type="text" id="graphicsCards" placeholder="Graphics Cards">
-                        <input type="text" id="osVersion" placeholder="OS Version" required>
-                        <input type="text" id="antivirus" placeholder="Antivirus">
+                    <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <label for="sqlTemplates" style="font-size: 13px; font-weight: 600;">Load Sample:</label>
+                        <select id="sqlTemplates" onchange="loadSqlTemplate()" style="width: 300px;">
+                            <option value="">-- Select a sample to load --</option>
+                            <option value="SELECT * FROM PCConfig">View all PCs</option>
+                            <option value="SELECT * FROM PCConfig WHERE ramGb >= 16">High RAM (16GB or more)</option>
+                            <option value="SELECT * FROM PCConfig WHERE osVersion LIKE '%Windows 11%'">Filter by OS (Windows 11)</option>
+                            <option value="SELECT * FROM PCConfig WHERE room_name IS NULL OR room_name = 'Unassigned'">Unassigned PCs (No Room)</option>
+                            <option value="SELECT * FROM PCConfig WHERE antivirus LIKE '%Defender%'">PCs using Windows Defender</option>
+                        </select>
                     </div>
-                    <button type="submit" style="background: #4CAF50; color: white;">Save Configuration</button>
-                    <button type="button" onclick="resetForm()">Cancel</button>
-                </form>
+
+                    <textarea id="sqlConsole" placeholder="SELECT * FROM PCConfig"></textarea>
+                    <div style="margin-top: 8px;">
+                        <button class="btn-primary" onclick="runSql()">Execute Query</button>
+                        <button onclick="document.getElementById('sqlConsole').value = '';">Clear</button>
+                    </div>
+                    <div id="sqlResultArea">Results will appear here...</div>
+                </div>
             </details>
 
-
-
-        </div> <div id="roomsTab" class="tab-content">
-        <div style="margin-bottom: 20px;">
-            <input type="text" id="newRoomInput" placeholder="Enter new room name...">
-            <button onclick="createNewRoom()" style="background: #4CAF50; color: white;">+ Create Room</button>
+            <details id="formWrapper" open>
+                <summary id="formSummary">Add / Edit PC Configuration</summary>
+                <div class="details-body">
+                    <form id="pcForm">
+                        <input type="hidden" id="pcId">
+                        <div class="form-grid">
+                            <input type="text" id="machineId" placeholder="Machine ID (UUID)" required title="Must be unique for each PC">
+                            <input type="text" id="hostname" placeholder="Hostname" required>
+                            <input type="text" id="roomName" placeholder="Room Name (Optional)">
+                            <input type="text" id="cpuModel" placeholder="CPU Model" required>
+                            <input type="number" id="ramGb" placeholder="RAM (GB)" required>
+                            <input type="text" id="storage" placeholder="Storage" required>
+                            <input type="text" id="graphicsCards" placeholder="Graphics Cards">
+                            <input type="text" id="osVersion" placeholder="OS Version" required>
+                            <input type="text" id="antivirus" placeholder="Antivirus">
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <button type="submit" class="btn-primary">Save Configuration</button>
+                            <button type="button" onclick="resetForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </details>
         </div>
-        <div id="roomsContainer"></div>
+
+        <div id="roomsTab" class="tab-content">
+            <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--gh-border); display: flex; gap: 8px;">
+                <input type="text" id="newRoomInput" placeholder="Enter new room name..." style="width: 250px;">
+                <button class="btn-primary" onclick="createNewRoom()">Create Room</button>
+            </div>
+            <div id="roomsContainer"></div>
+        </div>
+
     </div>
 
-    </div> <div class="right-sidebar">
-    <div class="log-panel">
-        <h3>📝 Live Event Log</h3>
-        <ul id="eventLogList">
-            <li>Loading logs...</li>
-        </ul>
+    <div class="right-sidebar">
+        <div class="log-panel">
+            <h3>Terminal Log</h3>
+            <ul id="eventLogList">
+                <li>Loading logs...</li>
+            </ul>
+        </div>
     </div>
-</div> </div> <div id="assignModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
-    <div class="modal-content" style="background:white; width:85%; margin:50px auto; padding:20px; border-radius:8px; max-height:80vh; overflow-y:auto;">
-        <h3>Assign PCs to <span id="assignRoomNameTarget" style="color: #4CAF50;"></span></h3>
-        <table id="assignTable" style="width:100%; border-collapse:collapse;">
+</div>
+
+<div id="assignModal" class="modal">
+    <div class="modal-content">
+        <h3>Assign PCs to <span id="assignRoomNameTarget" style="color: var(--gh-link);"></span></h3>
+        <table id="assignTable">
             <thead>
-            <tr><th style="border:1px solid #ddd; padding:8px;">Select</th><th style="border:1px solid #ddd; padding:8px;">Current Room</th><th style="border:1px solid #ddd; padding:8px;">Hostname</th><th style="border:1px solid #ddd; padding:8px;">Agent ID</th></tr>
+            <tr><th>Select</th><th>Current Room</th><th>Hostname</th><th>Agent ID</th></tr>
             </thead>
             <tbody></tbody>
         </table>
-        <br>
-        <button onclick="saveRoomAssignments()" style="background: #4CAF50; color: white; padding:8px; cursor:pointer;">Save Assignments</button>
-        <button onclick="closeModal('assignModal')" style="padding:8px; cursor:pointer;">Cancel</button>
+        <div style="margin-top: 16px;">
+            <button class="btn-primary" onclick="saveRoomAssignments()">Save Assignments</button>
+            <button onclick="closeModal('assignModal')">Cancel</button>
+        </div>
     </div>
 </div>
 
 <div id="historyModal" class="modal">
     <div class="modal-content">
-        <h3>History: <span id="historyHostname"></span></h3>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--gh-border); padding-bottom: 12px; margin-bottom: 16px;">
+            <h3 style="margin: 0; border-bottom: none; padding-bottom: 0;">Version History: <span id="historyHostname" style="font-family: monospace;"></span></h3>
+            <button onclick="closeModal('historyModal')">Close</button>
+        </div>
+
         <table id="historyTable">
             <thead>
             <tr>
@@ -210,7 +317,6 @@
             </thead>
             <tbody></tbody>
         </table>
-        <button onclick="closeModal('historyModal')" style="margin-top:15px; padding:8px;">Close</button>
     </div>
 </div>
 
@@ -218,7 +324,6 @@
     // ==========================================
     // 1. SECURITY BOUNCER
     // ==========================================
-    // If the user does not have the auth token, instantly kick them back to the login page
     if (localStorage.getItem('adminAuth') !== 'true') {
         window.location.href = 'index.html';
     }
@@ -231,7 +336,7 @@
     // ==========================================
     // 2. GLOBAL VARIABLES
     // ==========================================
-    const apiUrl = '/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs';
+    const apiUrl = 'https://demo-adding-drugs-strategy.trycloudflare.com/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs';
     let pcData = [];
     let customRooms = new Set();
 
@@ -251,7 +356,7 @@
             if (data.log) {
                 const ul = document.getElementById('eventLogList');
                 if (ul.innerHTML.includes('No recent events')) ul.innerHTML = '';
-                ul.insertAdjacentHTML('afterbegin', `<li><span class="log-highlight">></span> ${data.log}</li>`);
+                ul.insertAdjacentHTML('afterbegin', `<li><span class="log-highlight">~</span> ${data.log}</li>`);
             }
 
             if (data.action === 'refresh') {
@@ -272,7 +377,7 @@
 
 
     // ==========================================
-    // 4. CORE APPLICATION FUNCTIONS (Preserved)
+    // 4. CORE APPLICATION FUNCTIONS
     // ==========================================
 
     function loadLogs() {
@@ -282,10 +387,10 @@
                 const ul = document.getElementById('eventLogList');
                 ul.innerHTML = '';
                 if (logs.length === 0) {
-                    ul.innerHTML = '<li style="color:#888;">No recent events.</li>';
+                    ul.innerHTML = '<li style="color:#8b949e;">No recent events.</li>';
                 } else {
                     logs.forEach(log => {
-                        ul.insertAdjacentHTML('beforeend', `<li><span class="log-highlight">></span> ${log}</li>`);
+                        ul.insertAdjacentHTML('beforeend', `<li><span class="log-highlight">~</span> ${log}</li>`);
                     });
                 }
             }).catch(err => console.error("Error loading logs:", err));
@@ -300,7 +405,6 @@
         if(tabId === 'roomsTab') renderRoomsView();
     }
 
-    // --- MAIN CRUD OPERATIONS ---
     function loadConfigs() {
         fetch(apiUrl)
             .then(res => res.json())
@@ -310,20 +414,17 @@
             }).catch(err => console.error('Error fetching data:', err));
     }
 
-    // --- NEW: Updates the filter dropdown with unique rooms ---
     function updateRoomFilterOptions() {
         const filterSelect = document.getElementById('roomFilter');
-        if (!filterSelect) return; // Failsafe
+        if (!filterSelect) return;
 
-        const currentValue = filterSelect.value; // Remember the user's current selection
+        const currentValue = filterSelect.value;
 
-        // Reset the dropdown to just the default options
         filterSelect.innerHTML = `
             <option value="ALL">All Rooms</option>
             <option value="UNASSIGNED">Unassigned Only</option>
         `;
 
-        // Find all unique rooms currently in the data
         const uniqueRooms = new Set();
         pcData.forEach(pc => {
             if (pc.roomName && pc.roomName.trim() !== '') {
@@ -331,7 +432,6 @@
             }
         });
 
-        // Add them as <option> tags
         uniqueRooms.forEach(room => {
             const option = document.createElement('option');
             option.value = room;
@@ -339,7 +439,6 @@
             filterSelect.appendChild(option);
         });
 
-        // If the room the user had selected still exists, re-select it so the UI doesn't jump
         if (currentValue === 'ALL' || currentValue === 'UNASSIGNED' || uniqueRooms.has(currentValue)) {
             filterSelect.value = currentValue;
         } else {
@@ -347,34 +446,27 @@
         }
     }
 
-    // --- UPDATED: Main Table Renderer with Filtering ---
     function renderMainTable() {
-        // 1. Update the dropdown options just in case a new room was added
         updateRoomFilterOptions();
 
         const tbody = document.querySelector('#configTable tbody');
-        if (!tbody) return; // Failsafe
+        if (!tbody) return;
         tbody.innerHTML = '';
 
-        // 2. See what the user currently wants to filter by
         const filterSelect = document.getElementById('roomFilter');
         const selectedFilter = filterSelect ? filterSelect.value : 'ALL';
 
-        // 3. Apply the filter to the data BEFORE we loop through it
         const filteredData = pcData.filter(pc => {
             if (selectedFilter === 'ALL') return true;
             if (selectedFilter === 'UNASSIGNED') return !pc.roomName || pc.roomName.trim() === '';
-
-            // Otherwise, only return PCs that match the specific room
             return pc.roomName === selectedFilter;
         });
 
-        // 4. Render the filtered data
         filteredData.forEach((pc, index) => {
             const row = `<tr>
                     <td>${index + 1}</td>
-                    <td class="agent-id">${pc.machineId || 'N/A'}</td>
-                    <td><b>${pc.roomName || '<i>Unassigned</i>'}</b></td>
+                    <td><span class="agent-id">${pc.machineId || 'N/A'}</span></td>
+                    <td><b>${pc.roomName || '<i style="color:var(--gh-text-muted);font-weight:normal;">Unassigned</i>'}</b></td>
                     <td>${pc.hostname}</td>
                     <td>${pc.cpuModel}</td>
                     <td>${pc.ramGb}</td>
@@ -382,19 +474,18 @@
                     <td>${pc.graphicsCards}</td>
                     <td>${pc.osVersion}</td>
                     <td>${pc.antivirus}</td>
-                    <td>
-                        <button onclick="pingPc('${pc.machineId}', '${pc.hostname}')" style="background: #008CBA; color: white; border-color: #007B9E;">Ping</button>
+                    <td style="display: flex; flex-direction: column; gap: 6px;">
+                        <button class="btn-blue" onclick="pingPc('${pc.machineId}', '${pc.hostname}')">Ping</button>
                         <button onclick="editPc(${pc.id})">Edit</button>
                         <button onclick="openHistory('${pc.machineId}', '${pc.hostname}')">History</button>
-                        <button onclick="deletePc(${pc.id})" style="color: red;">Delete</button>
+                        <button class="btn-danger" onclick="deletePc(${pc.id})">Delete</button>
                     </td>
                 </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
         });
 
-        // Bonus: Show a little message if a room is completely empty
         if (filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #888; padding: 20px;">No PCs found matching this filter.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--gh-text-muted); padding: 32px;">No PCs found matching this filter.</td></tr>`;
         }
     }
 
@@ -409,36 +500,39 @@
         });
 
         if (customRooms.size === 0) {
-            container.innerHTML = '<p>No rooms created yet.</p>';
+            container.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--gh-text-muted); border: 1px dashed var(--gh-border); border-radius: 6px;">No rooms created yet.</div>';
             return;
         }
 
         customRooms.forEach(room => {
             const pcsInRoom = pcData.filter(pc => pc.roomName === room);
-            let tableHtml = `<table style="margin-top: 10px; width:100%; border-collapse:collapse;">
-                <thead><tr><th style="border:1px solid #ddd; padding:8px;">Hostname</th><th style="border:1px solid #ddd; padding:8px;">Agent ID</th><th style="border:1px solid #ddd; padding:8px;">CPU</th><th style="border:1px solid #ddd; padding:8px;">Actions</th></tr></thead><tbody>`;
+            let tableHtml = `<div class="room-table-container"><table>
+                <thead><tr><th>Hostname</th><th>Agent ID</th><th>CPU</th><th style="width: 80px;">Actions</th></tr></thead><tbody>`;
 
             if (pcsInRoom.length === 0) {
-                tableHtml += `<tr><td colspan="4" style="text-align:center; color:#888;">Room is empty</td></tr>`;
+                tableHtml += `<tr><td colspan="4" style="text-align:center; color:var(--gh-text-muted); padding: 16px;">Room is empty</td></tr>`;
             } else {
                 pcsInRoom.forEach(pc => {
                     tableHtml += `<tr>
-                        <td style="border:1px solid #ddd; padding:8px;">${pc.hostname}</td>
-                        <td style="border:1px solid #ddd; padding:8px;" class="agent-id">${pc.machineId}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">${pc.cpuModel}</td>
-                        <td style="border:1px solid #ddd; padding:8px;"><button onclick="removePcFromRoom(${pc.id})">Remove</button></td>
+                        <td>${pc.hostname}</td>
+                        <td><span class="agent-id">${pc.machineId}</span></td>
+                        <td>${pc.cpuModel}</td>
+                        <td><button onclick="removePcFromRoom(${pc.id})">Remove</button></td>
                     </tr>`;
                 });
             }
-            tableHtml += `</tbody></table>`;
+            tableHtml += `</tbody></table></div>`;
 
             container.insertAdjacentHTML('beforeend', `
-                <div style="border: 1px solid #ccc; margin-bottom: 20px; border-radius: 5px; padding: 15px; background: #fff;">
+                <div style="margin-bottom: 24px;">
                     <div class="room-header">
-                        <h3 style="margin: 0;">${room} <span style="font-size:0.6em; color:#666;">(${pcsInRoom.length} PCs)</span></h3>
+                        <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                            <svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" style="fill: var(--gh-text-muted);"><path d="M2 1.75C2 .784 2.784 0 3.75 0h8.5C13.216 0 14 .784 14 1.75v12.5A1.75 1.75 0 0 1 12.25 16h-8.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25ZM8 13a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path><path d="M5 4.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5ZM5 7a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5A.5.5 0 0 1 5 7Z"></path></svg>
+                            ${room} <span style="font-size:12px; color:var(--gh-text-muted); font-weight: normal; background: var(--gh-bg); border: 1px solid var(--gh-border); padding: 2px 6px; border-radius: 10px;">${pcsInRoom.length}</span>
+                        </h3>
                         <div>
-                            <button onclick="openAssignModal('${room}')" style="background:#008CBA; color:white; padding:6px; border:none; border-radius:4px; cursor:pointer;">Assign PCs</button>
-                            <button onclick="deleteRoom('${room}')" style="background:#f44336; color:white; padding:6px; border:none; border-radius:4px; cursor:pointer; margin-left: 5px;">Delete Room</button>
+                            <button onclick="openAssignModal('${room}')">Assign PCs</button>
+                            <button class="btn-danger" onclick="deleteRoom('${room}')" style="margin-left: 4px;">Delete Room</button>
                         </div>
                     </div>${tableHtml}
                 </div>`);
@@ -482,13 +576,13 @@
         const availablePcs = pcData.filter(pc => pc.roomName !== roomName);
 
         if(availablePcs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="border:1px solid #ddd; padding:8px;">All available PCs are already in this room.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--gh-text-muted);">All available PCs are already in this room.</td></tr>`;
         } else {
             availablePcs.forEach(pc => {
-                tbody.insertAdjacentHTML('beforeend', `<tr><td style="border:1px solid #ddd; padding:8px;"><input type="checkbox" class="pc-assign-cb" value="${pc.id}"></td><td style="border:1px solid #ddd; padding:8px;">${pc.roomName || 'Unassigned'}</td><td style="border:1px solid #ddd; padding:8px;">${pc.hostname}</td><td style="border:1px solid #ddd; padding:8px;">${pc.machineId}</td></tr>`);
+                tbody.insertAdjacentHTML('beforeend', `<tr><td><input type="checkbox" class="pc-assign-cb" value="${pc.id}"></td><td>${pc.roomName || '<span style="color:var(--gh-text-muted)">Unassigned</span>'}</td><td>${pc.hostname}</td><td><span class="agent-id">${pc.machineId}</span></td></tr>`);
             });
         }
-        document.getElementById('assignModal').style.display = 'block';
+        document.getElementById('assignModal').style.display = 'flex';
     }
 
     function saveRoomAssignments() {
@@ -586,7 +680,6 @@
         }
     }
 
-    // --- REAL PING OPERATION ---
     function pingPc(machineId, hostname) {
         if (!machineId || machineId === 'null' || machineId === 'undefined') {
             alert('Cannot ping: This record has no Agent ID.');
@@ -604,7 +697,6 @@
             .catch(err => console.error('Error queuing ping:', err));
     }
 
-    // --- GLOBAL PING OPERATION ---
     function pingAllPcs() {
         if (!confirm("Are you sure you want to ping ALL registered PCs? This will trigger a network-wide inventory update.")) return;
 
@@ -632,7 +724,6 @@
         document.getElementById('formWrapper').open = false;
     }
 
-    // --- HISTORY OPERATIONS ---
     function openHistory(machineId, hostname) {
         if (!machineId || machineId === 'null' || machineId === 'undefined') {
             alert('This record has no Agent ID. History cannot be retrieved.');
@@ -648,15 +739,15 @@
         document.getElementById('historyHostname').innerText = hostname;
 
         const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = '<tr><td colspan="9">Loading...</td></tr>';
-        document.getElementById('historyModal').style.display = 'block';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 16px;">Loading...</td></tr>';
+        document.getElementById('historyModal').style.display = 'flex';
 
         fetch(`${apiUrl}/history/${machineId}`)
             .then(res => res.json())
             .then(data => {
                 tbody.innerHTML = '';
                 if(data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9">No history found for this Machine ID.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 16px; color: var(--gh-text-muted);">No history found for this Machine ID.</td></tr>';
                     return;
                 }
 
@@ -664,7 +755,7 @@
                     const h = histVal || fallback;
                     const l = liveVal || fallback;
                     if (h != l) {
-                        return `<span style="color: #f44336; font-weight: bold;" title="Current Live Value: ${l}">${h}</span>`;
+                        return `<span style="color: var(--gh-danger); font-weight: 600;" title="Current Live Value: ${l}">${h}</span>`;
                     }
                     return h;
                 };
@@ -674,7 +765,7 @@
                     const histJson = encodeURIComponent(JSON.stringify(hist));
 
                     const row = `<tr>
-                        <td>${dateStr}</td>
+                        <td style="white-space:nowrap; color:var(--gh-text-muted);">${dateStr}</td>
                         <td>${highlightDiff(hist.roomName, livePc.roomName, '<i>Unassigned</i>')}</td>
                         <td>${highlightDiff(hist.hostname, livePc.hostname)}</td>
                         <td>${highlightDiff(hist.cpuModel, livePc.cpuModel)}</td>
@@ -714,7 +805,6 @@
         if(modalId) {
             document.getElementById(modalId).style.display = 'none';
         } else {
-            // Fallback for previous function call signature
             document.getElementById('historyModal').style.display = 'none';
             document.getElementById('assignModal').style.display = 'none';
         }
@@ -728,7 +818,6 @@
         }
     }
 
-    // --- SQL CONSOLE OPERATIONS ---
     function runSql() {
         const sql = document.getElementById('sqlConsole').value;
         const resultArea = document.getElementById('sqlResultArea');
@@ -744,13 +833,16 @@
             .then(res => res.json().then(data => ({ status: res.status, body: data })))
             .then(res => {
                 if (res.status === 200) {
+                    resultArea.style.color = "#56d364";
                     resultArea.innerText = JSON.stringify(res.body, null, 2);
                     loadConfigs();
                 } else {
+                    resultArea.style.color = "#ff7b72";
                     resultArea.innerText = "ERROR:\n" + (res.body.error || JSON.stringify(res.body));
                 }
             })
             .catch(err => {
+                resultArea.style.color = "#ff7b72";
                 resultArea.innerText = "Network/Parse Error:\n" + err;
             });
     }

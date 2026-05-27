@@ -38,20 +38,9 @@ public class PCConfigResource {
     private Sse sse;
     private SseBroadcaster broadcaster;
 
-    // Safely initialize the broadcaster and add dead-connection cleanup handlers
     private synchronized void initBroadcaster() {
         if (broadcaster == null && sse != null) {
             broadcaster = sse.newBroadcaster();
-
-            // NEW: Quietly remove clients when they close the browser tab
-            broadcaster.onClose(eventSink -> {
-                System.out.println("[SSE] Client disconnected gracefully.");
-            });
-
-            // NEW: Catch forced disconnects (like network drops) so it doesn't crash the IO thread
-            broadcaster.onError((eventSink, throwable) -> {
-                System.out.println("[SSE] Client dropped connection forcefully. Cleaning up.");
-            });
         }
     }
 
