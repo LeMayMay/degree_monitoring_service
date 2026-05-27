@@ -295,27 +295,19 @@
 </div>
 
 <div id="historyModal" class="modal">
-    <div class="modal-content">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--gh-border); padding-bottom: 12px; margin-bottom: 16px;">
-            <h3 style="margin: 0; border-bottom: none; padding-bottom: 0;">Version History: <span id="historyHostname" style="font-family: monospace;"></span></h3>
-            <button onclick="closeModal('historyModal')">Close</button>
+    <div class="modal-content" style="max-width: 1200px;">
+        <span class="close-btn" onclick="closeModal('historyModal')">&times;</span>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="margin: 0;">Record History: <span id="historyHostname" style="color:var(--accent);"></span></h2>
+            <button id="deleteAllHistoryBtn" class="btn-danger" style="padding: 6px 12px; display: none;">🗑️ Delete All History</button>
         </div>
 
-        <table id="historyTable">
+        <table>
             <thead>
-            <tr>
-                <th>Saved At</th>
-                <th>Room</th>
-                <th>Hostname</th>
-                <th>CPU</th>
-                <th>RAM</th>
-                <th>Storage</th>
-                <th>GPU</th>
-                <th>OS</th>
-                <th>Action</th>
-            </tr>
+            <tr><th>Saved Date</th><th>Room</th><th>Hostname</th><th>CPU</th><th>RAM</th><th>Storage</th><th>GPU</th><th>OS</th><th style="min-width: 150px;">Actions</th></tr>
             </thead>
-            <tbody></tbody>
+            <tbody id="historyTableBody"></tbody>
         </table>
     </div>
 </div>
@@ -738,25 +730,30 @@
 
         document.getElementById('historyHostname').innerText = hostname;
 
-        const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 16px;">Loading...</td></tr>';
-        document.getElementById('historyModal').style.display = 'flex';
+        // Wire up the Delete All button for this specific PC
+        const deleteAllBtn = document.getElementById('deleteAllHistoryBtn');
+        deleteAllBtn.onclick = () => deleteAllHistory(machineId, hostname);
+
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Loading...</td></tr>';
+        document.getElementById('historyModal').style.display = 'block';
 
         fetch(`${apiUrl}/history/${machineId}`)
             .then(res => res.json())
             .then(data => {
                 tbody.innerHTML = '';
                 if(data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 16px; color: var(--gh-text-muted);">No history found for this Machine ID.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: var(--gh-text-muted:);">No history found for this Machine ID.</td></tr>';
+                    deleteAllBtn.style.display = 'none'; // Hide if empty
                     return;
                 }
+
+                deleteAllBtn.style.display = 'block'; // Show if data exists
 
                 const highlightDiff = (histVal, liveVal, fallback = '') => {
                     const h = histVal || fallback;
                     const l = liveVal || fallback;
-                    if (h != l) {
-                        return `<span style="color: var(--gh-danger); font-weight: 600;" title="Current Live Value: ${l}">${h}</span>`;
-                    }
+                    if (h != l) return `<span style="color: #ff7b72; font-weight: bold;" title="Current Live Value: ${l}">${h}</span>`;
                     return h;
                 };
 
@@ -764,8 +761,9 @@
                     const dateStr = hist.savedAt ? new Date(hist.savedAt).toLocaleString() : 'Unknown';
                     const histJson = encodeURIComponent(JSON.stringify(hist));
 
+                    // PASSED: hist.savedAt string directly into the button launcher
                     const row = `<tr>
-                        <td style="white-space:nowrap; color:var(--gh-text-muted);">${dateStr}</td>
+                        <td>${dateStr}</td>
                         <td>${highlightDiff(hist.roomName, livePc.roomName, '<i>Unassigned</i>')}</td>
                         <td>${highlightDiff(hist.hostname, livePc.hostname)}</td>
                         <td>${highlightDiff(hist.cpuModel, livePc.cpuModel)}</td>
@@ -773,11 +771,52 @@
                         <td>${highlightDiff(hist.storage, livePc.storage)}</td>
                         <td>${highlightDiff(hist.graphicsCards, livePc.graphicsCards)}</td>
                         <td>${highlightDiff(hist.osVersion, livePc.osVersion)}</td>
-                        <td><button onclick="restoreHistory('${histJson}')">Restore</button></td>
+                        <td>
+                            <button onclick="restoreHistory('${histJson}')" style="margin-right: 5px;">Restore</button>
+                            <button onclick="deleteHistoryEntry('${machineId}', '${hist.savedAt}', '${hostname}')" class="btn-danger" style="padding: 4px 8px;">X</button>
+                        </td>
                     </tr>`;
                     tbody.insertAdjacentHTML('beforeend', row);
                 });
             });
+    }
+
+    function deleteHistoryEntry(machineId, savedAtTimestamp, hostname) {
+        if (!savedAtTimestamp || savedAtTimestamp === 'null') {
+            alert('Cannot delete: This history entry is missing a valid creation timestamp.');
+            return;
+        }
+
+        if (!confirm('Delete this specific history record? This cannot be undone.')) return;
+
+        // Build the URL with safe query parameters matching our Java @QueryParam names
+        const deleteUrl = `${apiUrl}/history/entry?machineId=${encodeURIComponent(machineId)}&savedAt=${encodeURIComponent(savedAtTimestamp)}`;
+
+        fetch(deleteUrl, { method: 'DELETE' })
+            .then(res => {
+                if (res.ok) {
+                    // Instantly refresh the modal to show the entry is gone
+                    openHistory(machineId, hostname);
+                } else {
+                    alert('Server rejected the delete request. Status: ' + res.status);
+                }
+            })
+            .catch(err => console.error("Error deleting history:", err));
+    }
+
+    function deleteAllHistory(machineId, hostname) {
+        if (!confirm(`Are you absolutely sure you want to wipe ALL history for ${hostname}?`)) return;
+
+        fetch(`${apiUrl}/history/all/${machineId}`, { method: 'DELETE' })
+            .then(res => {
+                if (res.ok) {
+                    // Refresh the modal, which will now display "No history found"
+                    openHistory(machineId, hostname);
+                } else {
+                    alert('Failed to clear history.');
+                }
+            })
+            .catch(err => console.error("Error clearing history:", err));
     }
 
     function restoreHistory(histJsonStr) {

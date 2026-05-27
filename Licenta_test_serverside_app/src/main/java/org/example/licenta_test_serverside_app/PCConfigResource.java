@@ -256,6 +256,56 @@ public class PCConfigResource {
         return Response.ok(history).build();
     }
 
+    // ==========================================
+    // HISTORY MANAGEMENT ENDPOINTS
+    // ==========================================
+
+    @DELETE
+    @Path("/history/entry")
+    public Response deleteHistoryEntry(
+            @QueryParam("machineId") String machineId,
+            @QueryParam("savedAt") String savedAtStr) {
+
+        try {
+            // 1. Convert the incoming string timestamp back into a Java LocalDateTime
+            java.time.LocalDateTime targetTime = java.time.LocalDateTime.parse(savedAtStr);
+
+            // 2. Find the exact record that matches BOTH the machine ID and the timestamp
+            List<PCConfigHistory> results = em.createQuery(
+                            "SELECT h FROM PCConfigHistory h WHERE h.machineId = :mid AND h.savedAt = :sat",
+                            PCConfigHistory.class)
+                    .setParameter("mid", machineId)
+                    .setParameter("sat", targetTime)
+                    .getResultList();
+
+            if (!results.isEmpty()) {
+                // 3. Remove that specific entry from the database
+                em.remove(results.get(0));
+                logEvent("Deleted specific history entry via timestamp matching.");
+                return Response.noContent().build();
+            }
+
+            return Response.status(Response.Status.NOT_FOUND).build();
+
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Invalid timestamp format\"}")
+                    .build();
+        }
+    }
+
+    @DELETE
+    @Path("/history/all/{machineId}")
+    public Response deleteAllHistory(@PathParam("machineId") String machineId) {
+        // Bulk delete query is much faster than fetching and deleting one by one
+        int deletedCount = em.createQuery("DELETE FROM PCConfigHistory h WHERE h.machineId = :machineId")
+                .setParameter("machineId", machineId)
+                .executeUpdate();
+
+        logEvent("Cleared all history (" + deletedCount + " records) for Agent ID: " + machineId);
+        return Response.noContent().build();
+    }
+
     @POST
     @Path("/query")
     @Consumes(MediaType.TEXT_PLAIN)
