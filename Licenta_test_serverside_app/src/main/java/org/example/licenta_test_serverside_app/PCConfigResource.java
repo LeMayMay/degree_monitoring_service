@@ -1,6 +1,7 @@
 package org.example.licenta_test_serverside_app;
 
-import jakarta.ejb.Singleton; // <-- IMPORTANT: Changed from Stateless
+import jakarta.annotation.sql.DataSourceDefinition;
+import jakarta.ejb.Singleton;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.ws.rs.*;
@@ -12,17 +13,22 @@ import jakarta.ws.rs.sse.SseBroadcaster;
 import jakarta.ws.rs.sse.SseEventSink;
 import java.util.List;
 
+
+@DataSourceDefinition(
+        name = "java:app/jdbc/pcInventoryDS",
+        className = "org.h2.jdbcx.JdbcDataSource",
+        url = "jdbc:h2:file:./database/pc_inventory_db;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE",
+        user = "sa",
+        password = ""
+)
 @Path("/configs")
 @Singleton
-@Produces(MediaType.APPLICATION_JSON) // Applies JSON to all responses
-@Consumes(MediaType.APPLICATION_JSON) // Applies JSON to all requests
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class PCConfigResource {
 
     private final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
-
     private volatile long globalPingExpirationTime = 0;
-
-    // NEW: Stores the last 50 events in memory
     private final java.util.concurrent.ConcurrentLinkedDeque<String> eventLogs = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
     @PersistenceContext(unitName = "default")
@@ -32,7 +38,6 @@ public class PCConfigResource {
     private Sse sse;
     private SseBroadcaster broadcaster;
 
-    // Safely initialize the broadcaster when the first client connects
     private synchronized void initBroadcaster() {
         if (broadcaster == null && sse != null) {
             broadcaster = sse.newBroadcaster();
@@ -44,11 +49,9 @@ public class PCConfigResource {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void streamUpdates(@Context SseEventSink eventSink) {
         initBroadcaster();
-        // Register the browser's connection to our broadcaster
         broadcaster.register(eventSink);
     }
 
-    // NEW: Replaces notifyClients(). Logs the event and broadcasts it as JSON.
     private void logEvent(String message) {
         String time = java.time.LocalTime.now().withNano(0).toString();
         String entry = "[" + time + "] " + message;
@@ -59,13 +62,11 @@ public class PCConfigResource {
         }
 
         if (broadcaster != null && sse != null) {
-            // Send both the refresh command AND the log message in one JSON payload
             String payload = "{\"action\":\"refresh\", \"log\":\"" + entry + "\"}";
             broadcaster.broadcast(sse.newEvent(payload));
         }
     }
 
-    // NEW: Endpoint for the frontend to fetch logs on initial page load
     @GET
     @Path("/logs")
     public Response getEventLogs() {
@@ -74,7 +75,6 @@ public class PCConfigResource {
 
     @POST
     public Response addConfig(PCConfig incomingConfig) {
-        // Automatically attach the current timestamp to the payload
         incomingConfig.setLastUpdated(java.time.LocalDateTime.now());
 
         List<PCConfig> existingList = em.createQuery(
@@ -95,7 +95,7 @@ public class PCConfigResource {
             existing.setGraphicsCards(incomingConfig.getGraphicsCards());
             existing.setOsVersion(incomingConfig.getOsVersion());
             existing.setAntivirus(incomingConfig.getAntivirus());
-            existing.setLastUpdated(java.time.LocalDateTime.now()); // Update timestamp
+            existing.setLastUpdated(java.time.LocalDateTime.now());
 
             em.merge(existing);
             logEvent("Saved configuration for PC: " + incomingConfig.getHostname());
@@ -118,12 +118,8 @@ public class PCConfigResource {
     @POST
     @Path("/ping/all")
     public Response triggerGlobalPing() {
-        // Turn on the "Radio Broadcast" signal for 15 seconds.
-        // Since clients check in every 10 seconds, 15 seconds guarantees
-        // every single online client will hear it at least once.
         logEvent("Global Ping Broadcast Activated.");
         globalPingExpirationTime = System.currentTimeMillis() + 15000;
-
         return Response.ok("{\"message\": \"Global Ping Broadcast Activated for 15 seconds\"}").build();
     }
 
@@ -131,15 +127,10 @@ public class PCConfigResource {
     @Path("/tasks/{machineId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPendingTasks(@PathParam("machineId") String machineId) {
-
-        // 1. Is the Global Radio Broadcast currently active?
         boolean hasGlobalPing = System.currentTimeMillis() < globalPingExpirationTime;
-
-        // 2. Check for manual individual pings
         boolean hasManualPing = pendingPings.getOrDefault(machineId, false);
-
-        // 3. Check for automatic 30-minute interval pings
         boolean hasAutoPing = false;
+
         List<PCConfig> pcs = em.createQuery("SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
                 .setParameter("mid", machineId)
                 .getResultList();
@@ -155,9 +146,7 @@ public class PCConfigResource {
             }
         }
 
-        // If ANY of the three conditions are true, issue the PING instruction
         if (hasGlobalPing || hasManualPing || hasAutoPing) {
-            // Clear the individual manual flag so we don't double-ping later
             pendingPings.put(machineId, false);
             return Response.ok("{\"command\": \"PING\"}").build();
         }
@@ -185,7 +174,6 @@ public class PCConfigResource {
         em.merge(updatedConfig);
 
         logEvent("Updated Configuration.");
-
         return Response.ok(updatedConfig).build();
     }
 
@@ -199,8 +187,7 @@ public class PCConfigResource {
         em.remove(existing);
 
         logEvent("Deleted a PC record from the database.");
-
-        return Response.noContent().build(); // 204 No Content is standard for a successful delete
+        return Response.noContent().build();
     }
 
     @GET
@@ -219,18 +206,14 @@ public class PCConfigResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     public Response executeCustomQuery(String sql) {
-
-        // 1. Basic empty check
         if (sql == null || sql.trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\": \"Empty query provided.\"}")
                     .build();
         }
 
-        // 2. SECURITY GATEKEEPER: Prevent destructive SQL Injection
         String upperSql = sql.toUpperCase().trim();
 
-        // Rule A: The query MUST start with SELECT.
         if (!upperSql.startsWith("SELECT")) {
             logEvent("Blocked illegal SQL execution: Non-SELECT statement.");
             return Response.status(Response.Status.FORBIDDEN)
@@ -238,12 +221,9 @@ public class PCConfigResource {
                     .build();
         }
 
-        // Rule B: Block stacked queries (using semicolons to chain commands) and destructive keywords
-        // Note: We include spaces around the words so we don't accidentally block a PC hostname named "DROPLET"
         String[] forbiddenKeywords = {";", " DROP ", " DELETE ", " UPDATE ", " INSERT ", " ALTER ", " TRUNCATE ", " EXEC "};
 
         for (String keyword : forbiddenKeywords) {
-            // We check if the query contains the keyword, OR ends with it
             if (upperSql.contains(keyword) || upperSql.endsWith(keyword.trim())) {
                 logEvent("Blocked illegal SQL execution: Destructive keyword detected (" + keyword.trim() + ").");
                 return Response.status(Response.Status.FORBIDDEN)
@@ -252,23 +232,14 @@ public class PCConfigResource {
             }
         }
 
-        // 3. Safe Execution
         try {
             logEvent("Executed custom SQL query.");
-
-            // Execute the raw query
             jakarta.persistence.Query query = em.createNativeQuery(sql);
             List<?> results = query.getResultList();
-
-            // Let the server automatically map the List to a valid JSON array
             return Response.ok(results).build();
-
         } catch (Exception e) {
-            // NEVER build JSON strings manually!
-            // Put the error in a Map and let the server safely escape all newlines and quotes.
             java.util.Map<String, String> errorResponse = new java.util.HashMap<>();
             errorResponse.put("error", e.getMessage() != null ? e.getMessage() : e.toString());
-
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(errorResponse)
                     .build();
