@@ -81,9 +81,20 @@
 
             <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0;">Connected PCs</h3>
-                <button onclick="pingAllPcs()" style="background: #ff9800; color: white; padding: 8px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    ⚡ Ping All PCs
-                </button>
+                <div style="display: flex; align-items: center; gap: 15px;">
+
+                    <div>
+                        <label for="roomFilter" style="font-size: 0.9em; font-weight: bold; color: #555;">Filter by Room:</label>
+                        <select id="roomFilter" onchange="renderMainTable()" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; background: #fff;">
+                            <option value="ALL">All Rooms</option>
+                            <option value="UNASSIGNED">Unassigned Only</option>
+                        </select>
+                    </div>
+
+                    <button onclick="pingAllPcs()" style="background: #ff9800; color: white; padding: 8px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        ⚡ Ping All PCs
+                    </button>
+                </div>
             </div>
 
             <table id="configTable">
@@ -243,16 +254,65 @@
             }).catch(err => console.error('Error fetching data:', err));
     }
 
+    // --- NEW: Updates the filter dropdown with unique rooms ---
+    function updateRoomFilterOptions() {
+        const filterSelect = document.getElementById('roomFilter');
+        const currentValue = filterSelect.value; // Remember the user's current selection
+
+        // Reset the dropdown to just the default options
+        filterSelect.innerHTML = `
+            <option value="ALL">All Rooms</option>
+            <option value="UNASSIGNED">Unassigned Only</option>
+        `;
+
+        // Find all unique rooms currently in the data
+        const uniqueRooms = new Set();
+        pcData.forEach(pc => {
+            if (pc.roomName && pc.roomName.trim() !== '') {
+                uniqueRooms.add(pc.roomName.trim());
+            }
+        });
+
+        // Add them as <option> tags
+        uniqueRooms.forEach(room => {
+            const option = document.createElement('option');
+            option.value = room;
+            option.textContent = room;
+            filterSelect.appendChild(option);
+        });
+
+        // If the room the user had selected still exists, re-select it so the UI doesn't jump
+        if (currentValue === 'ALL' || currentValue === 'UNASSIGNED' || uniqueRooms.has(currentValue)) {
+            filterSelect.value = currentValue;
+        } else {
+            filterSelect.value = 'ALL';
+        }
+    }
+
+    // --- UPDATED: Main Table Renderer with Filtering ---
     function renderMainTable() {
+        // 1. Update the dropdown options just in case a new room was added
+        updateRoomFilterOptions();
+
         const tbody = document.querySelector('#configTable tbody');
         tbody.innerHTML = '';
 
-        // 1. Add 'index' to the forEach loop parameters
-        pcData.forEach((pc, index) => {
+        // 2. See what the user currently wants to filter by
+        const selectedFilter = document.getElementById('roomFilter').value;
 
+        // 3. Apply the filter to the data BEFORE we loop through it
+        const filteredData = pcData.filter(pc => {
+            if (selectedFilter === 'ALL') return true;
+            if (selectedFilter === 'UNASSIGNED') return !pc.roomName || pc.roomName.trim() === '';
+
+            // Otherwise, only return PCs that match the specific room
+            return pc.roomName === selectedFilter;
+        });
+
+        // 4. Render the filtered data
+        filteredData.forEach((pc, index) => {
             const row = `<tr>
                     <td>${index + 1}</td>
-
                     <td class="agent-id">${pc.machineId || 'N/A'}</td>
                     <td><b>${pc.roomName || '<i>Unassigned</i>'}</b></td>
                     <td>${pc.hostname}</td>
@@ -271,6 +331,11 @@
                 </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
         });
+
+        // Bonus: Show a little message if a room is completely empty
+        if (filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: #888; padding: 20px;">No PCs found matching this filter.</td></tr>`;
+        }
     }
 
     function renderRoomsView() {
