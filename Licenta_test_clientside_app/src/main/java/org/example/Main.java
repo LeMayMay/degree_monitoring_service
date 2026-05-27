@@ -29,30 +29,37 @@ public class Main {
     private static final String SERVER_URL = "http://192.168.1.133:8080/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs";
 
     public static void main(String[] args) {
-        System.out.println("PC Agent Daemon Started.");
-
-        // 1. Fetch the Machine ID once at startup to save disk read operations
+        // 1. Fetch the Machine ID once at startup
         String machineId = getOrGenerateMachineId();
-        System.out.println("Agent ID: " + machineId);
 
-        // 2. Send initial startup payload
+        // 2. Check for Native OS Triggers via Command Line Arguments
+        if (args.length > 0) {
+            String trigger = args[0].toUpperCase();
+            if (trigger.equals("--BOOT")) {
+                System.out.println("OS Boot Trigger intercepted.");
+                sendPayload("OS_BOOT", machineId);
+                return; // Exit immediately, the native background service will handle polling
+            } else if (trigger.equals("--SHUTDOWN")) {
+                System.out.println("OS Shutdown Trigger intercepted.");
+                sendPayload("OS_SHUTDOWN", machineId);
+                return; // Exit immediately so the OS can finish powering off
+            }
+        }
+
+        // 3. Fallback: Standard continuous background daemon mode
+        System.out.println("PC Agent Daemon Started in Polling Mode.");
         sendPayload("STARTUP", machineId);
 
-        // 3. Register Shutdown Hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            sendPayload("SHUTDOWN", machineId);
-        }));
-
-        // 4. Command Polling Loop
+        // Standard continuous loop (keeps running indefinitely in the background)
         while (true) {
             try {
-                // Wait 10 seconds before asking the server for tasks again
                 Thread.sleep(10000);
                 checkForTasks(machineId);
-
             } catch (InterruptedException e) {
-                System.err.println("Daemon execution interrupted.");
+                System.err.println("Daemon execution interrupted by OS. Exiting...");
                 break;
+            } catch (Exception e) {
+                System.err.println("[WARNING] Background loop encountered an error, retrying next cycle...");
             }
         }
     }
