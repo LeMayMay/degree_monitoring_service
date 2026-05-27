@@ -79,6 +79,32 @@
 
         <div id="dashboardTab" class="tab-content active">
 
+            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">Connected PCs</h3>
+                <button onclick="pingAllPcs()" style="background: #ff9800; color: white; padding: 8px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    ⚡ Ping All PCs
+                </button>
+            </div>
+
+            <table id="configTable">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Agent ID</th>
+                    <th>Room</th>
+                    <th>Hostname</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                    <th>Storage</th>
+                    <th>GPU</th>
+                    <th>OS</th>
+                    <th>Antivirus</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
             <details open>
                 <summary>SQL Command Console</summary>
                 <p style="color: red; margin-top: 0; font-size: 0.9em;"><b>Warning:</b> Executes directly against the database.</p>
@@ -108,31 +134,7 @@
                 </form>
             </details>
 
-            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0;">Connected PCs</h3>
-                <button onclick="pingAllPcs()" style="background: #ff9800; color: white; padding: 8px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    ⚡ Ping All PCs
-                </button>
-            </div>
 
-            <table id="configTable">
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Agent ID</th>
-                    <th>Room</th>
-                    <th>Hostname</th>
-                    <th>CPU</th>
-                    <th>RAM</th>
-                    <th>Storage</th>
-                    <th>GPU</th>
-                    <th>OS</th>
-                    <th>Antivirus</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
 
         </div> <div id="roomsTab" class="tab-content">
         <div style="margin-bottom: 20px;">
