@@ -27,6 +27,10 @@ import java.util.List;
 @Consumes(MediaType.APPLICATION_JSON)
 public class PCConfigResource {
 
+    // Tracker for the exact millisecond a PC last checked in
+    private final java.util.concurrent.ConcurrentHashMap<String, java.time.LocalDateTime> lastPingResponse = new java.util.concurrent.ConcurrentHashMap<>();
+    // Background timer to handle the 20-second delays safely
+    private final java.util.concurrent.ScheduledExecutorService scheduler = java.util.concurrent.Executors.newScheduledThreadPool(2);
     private final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile long globalPingExpirationTime = 0;
     private final java.util.concurrent.ConcurrentLinkedDeque<String> eventLogs = new java.util.concurrent.ConcurrentLinkedDeque<>();
@@ -76,7 +80,8 @@ public class PCConfigResource {
     @POST
     public Response addConfig(PCConfig incomingConfig) {
         incomingConfig.setLastUpdated(java.time.LocalDateTime.now());
-
+        // Log the exact time this payload arrived in high-speed memory for the ping tracker
+        lastPingResponse.put(incomingConfig.getMachineId(), java.time.LocalDateTime.now());
         List<PCConfig> existingList = em.createQuery(
                         "SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
                 .setParameter("mid", incomingConfig.getMachineId())
@@ -112,6 +117,28 @@ public class PCConfigResource {
     public Response triggerManualPing(@PathParam("machineId") String machineId) {
         logEvent("Queued manual ping for Agent ID: " + machineId);
         pendingPings.put(machineId, true);
+
+        // 1. Record the exact time the ping was requested
+        final java.time.LocalDateTime requestTime = java.time.LocalDateTime.now();
+
+        // 2. Safely fetch the PC's hostname from the DB for the log message
+        List<PCConfig> pcs = em.createQuery("SELECT p FROM PCConfig p WHERE p.machineId = :mid", PCConfig.class)
+                .setParameter("mid", machineId)
+                .getResultList();
+        final String targetHostname = pcs.isEmpty() ? "Unknown PC" : pcs.get(0).getHostname();
+
+        // 3. Start a background countdown for 20 seconds
+        scheduler.schedule(() -> {
+            java.time.LocalDateTime lastResponse = lastPingResponse.get(machineId);
+
+            // If they never responded, or their last response is OLDER than our request...
+            if (lastResponse == null || lastResponse.isBefore(requestTime)) {
+                logEvent("⚠️ ALERT: " + targetHostname + " not responding to ping. Is the PC turned on?");
+            } else {
+                logEvent("✅ " + targetHostname + " successfully reported in.");
+            }
+        }, 20, java.util.concurrent.TimeUnit.SECONDS);
+
         return Response.ok().build();
     }
 
@@ -120,6 +147,34 @@ public class PCConfigResource {
     public Response triggerGlobalPing() {
         logEvent("Global Ping Broadcast Activated.");
         globalPingExpirationTime = System.currentTimeMillis() + 15000;
+
+        final java.time.LocalDateTime requestTime = java.time.LocalDateTime.now();
+
+        // Fetch all currently known PCs so the background thread knows who to check
+        final List<PCConfig> allPcs = em.createQuery("SELECT p FROM PCConfig p", PCConfig.class).getResultList();
+
+        // Start a background countdown for 20 seconds
+        scheduler.schedule(() -> {
+            java.util.List<String> ghosts = new java.util.ArrayList<>();
+
+            for (PCConfig pc : allPcs) {
+                java.time.LocalDateTime lastRes = lastPingResponse.get(pc.getMachineId());
+                if (lastRes == null || lastRes.isBefore(requestTime)) {
+                    ghosts.add(pc.getHostname());
+                }
+            }
+
+            if (!ghosts.isEmpty()) {
+                if (ghosts.size() == allPcs.size()) {
+                    logEvent("⚠️ ALERT: No PCs responding!");
+                } else {
+                    logEvent("⚠️ ALERT: " + ghosts.size() + " PCs ignored the global ping. Missing: " + String.join(", ", ghosts));
+                }
+            } else {
+                logEvent("✅ NETWORK SWEEP COMPLETE: Every single PC reported back successfully!");
+            }
+        }, 20, java.util.concurrent.TimeUnit.SECONDS);
+
         return Response.ok("{\"message\": \"Global Ping Broadcast Activated for 15 seconds\"}").build();
     }
 
