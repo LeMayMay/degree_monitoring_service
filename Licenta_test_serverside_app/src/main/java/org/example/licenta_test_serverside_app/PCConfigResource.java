@@ -217,23 +217,60 @@ public class PCConfigResource {
     @POST
     @Path("/query")
     @Consumes(MediaType.TEXT_PLAIN)
-    public Response executeSql(String sqlQuery) {
-        try {
-            String q = sqlQuery.trim().toUpperCase();
-            if (q.startsWith("SELECT")) {
-                List<?> results = em.createNativeQuery(sqlQuery).getResultList();
-                logEvent("Executed custom SQL query.");
-                return Response.ok(results).build();
-            }
-            else
-            {
-                int rowsAffected = em.createNativeQuery(sqlQuery).executeUpdate();
-                logEvent("Executed custom SQL query.");
-                return Response.ok("{\"rowsAffected\": " + rowsAffected + "}").build();
-            }
-        } catch (Exception e) {
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response executeCustomQuery(String sql) {
+
+        // 1. Basic empty check
+        if (sql == null || sql.trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"" + e.getMessage() + "\"}")
+                    .entity("{\"error\": \"Empty query provided.\"}")
+                    .build();
+        }
+
+        // 2. SECURITY GATEKEEPER: Prevent destructive SQL Injection
+        String upperSql = sql.toUpperCase().trim();
+
+        // Rule A: The query MUST start with SELECT.
+        if (!upperSql.startsWith("SELECT")) {
+            logEvent("Blocked illegal SQL execution: Non-SELECT statement.");
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("{\"error\": \"Security Policy: Only SELECT statements are allowed in this console.\"}")
+                    .build();
+        }
+
+        // Rule B: Block stacked queries (using semicolons to chain commands) and destructive keywords
+        // Note: We include spaces around the words so we don't accidentally block a PC hostname named "DROPLET"
+        String[] forbiddenKeywords = {";", " DROP ", " DELETE ", " UPDATE ", " INSERT ", " ALTER ", " TRUNCATE ", " EXEC "};
+
+        for (String keyword : forbiddenKeywords) {
+            // We check if the query contains the keyword, OR ends with it
+            if (upperSql.contains(keyword) || upperSql.endsWith(keyword.trim())) {
+                logEvent("Blocked illegal SQL execution: Destructive keyword detected (" + keyword.trim() + ").");
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity("{\"error\": \"Security Policy: Destructive commands or stacked queries are strictly prohibited.\"}")
+                        .build();
+            }
+        }
+
+        // 3. Safe Execution
+        try {
+            logEvent("Executed custom SQL query.");
+
+            // Execute the raw query
+            jakarta.persistence.Query query = em.createNativeQuery(sql);
+            List<?> results = query.getResultList();
+
+            // Let the server automatically map the List to a valid JSON array
+            return Response.ok(results).build();
+
+        } catch (Exception e) {
+            // NEVER build JSON strings manually!
+            // Put the error in a Map and let the server safely escape all newlines and quotes.
+            java.util.Map<String, String> errorResponse = new java.util.HashMap<>();
+            errorResponse.put("error", e.getMessage() != null ? e.getMessage() : e.toString());
+
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errorResponse)
                     .build();
         }
     }

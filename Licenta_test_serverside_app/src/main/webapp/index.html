@@ -108,12 +108,25 @@
             <details open>
                 <summary>SQL Command Console</summary>
                 <p style="color: red; margin-top: 0; font-size: 0.9em;"><b>Warning:</b> Executes directly against the database.</p>
-                <textarea id="sqlConsole" placeholder="SELECT * FROM pc_configs;"></textarea>
+
+                <div style="margin-bottom: 10px;">
+                    <label for="sqlTemplates" style="font-size: 0.9em; font-weight: bold; color: #555;">Load Sample Query: </label>
+                    <select id="sqlTemplates" onchange="loadSqlTemplate()" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; width: 300px;">
+                        <option value="">-- Select a sample to load --</option>
+                        <option value="SELECT * FROM PCConfig">View all PCs</option>
+                        <option value="SELECT * FROM PCConfig WHERE ramGb >= 16">High RAM (16GB or more)</option>
+                        <option value="SELECT * FROM PCConfig WHERE osVersion LIKE '%Windows 11%'">Filter by OS (Windows 11)</option>
+                        <option value="SELECT * FROM PCConfig WHERE room_name IS NULL OR room_name = 'Unassigned'">Unassigned PCs (No Room)</option>
+                        <option value="SELECT * FROM PCConfig WHERE antivirus LIKE '%Defender%'">PCs using Windows Defender</option>
+                    </select>
+                </div>
+
+                <textarea id="sqlConsole" placeholder="SELECT * FROM PCConfig"></textarea>
                 <br>
                 <button onclick="runSql()">Execute Query</button>
+                <button onclick="document.getElementById('sqlConsole').value = '';" style="background: #fff;">Clear</button>
                 <div id="sqlResultArea">Results will appear here...</div>
             </details>
-
             <details id="formWrapper">
                 <summary id="formSummary">Add / Edit PC Configuration</summary>
                 <form id="pcForm">
@@ -579,6 +592,14 @@
             // Fallback for previous function call signature
             document.getElementById('historyModal').style.display = 'none';
             document.getElementById('assignModal').style.display = 'none';
+        }
+    }
+
+    function loadSqlTemplate() {
+        const select = document.getElementById('sqlTemplates');
+        const console = document.getElementById('sqlConsole');
+        if (select.value) {
+            console.value = select.value;
         }
     }
 
