@@ -28,11 +28,11 @@ import java.util.List;
 public class PCConfigResource {
 
     // Tracker for the exact millisecond a PC last checked in
-    private final java.util.concurrent.ConcurrentHashMap<String, java.time.LocalDateTime> lastPingResponse = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.time.LocalDateTime> lastPingResponse = new java.util.concurrent.ConcurrentHashMap<>();
     // Background timer to handle the 20-second delays safely
-    private final java.util.concurrent.ScheduledExecutorService scheduler = java.util.concurrent.Executors.newScheduledThreadPool(2);
-    private final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
-    private volatile long globalPingExpirationTime = 0;
+    private static final java.util.concurrent.ScheduledExecutorService scheduler = java.util.concurrent.Executors.newScheduledThreadPool(2);
+    private static final java.util.concurrent.ConcurrentHashMap<String, Boolean> pendingPings = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile long globalPingExpirationTime = 0;
     private final java.util.concurrent.ConcurrentLinkedDeque<String> eventLogs = new java.util.concurrent.ConcurrentLinkedDeque<>();
 
     @PersistenceContext(unitName = "default")
@@ -204,7 +204,8 @@ public class PCConfigResource {
         }
 
         if (hasGlobalPing || hasManualPing || hasAutoPing) {
-            pendingPings.put(machineId, false);
+            pendingPings.remove(machineId);
+
             return Response.ok("{\"command\": \"PING\"}").build();
         }
 
