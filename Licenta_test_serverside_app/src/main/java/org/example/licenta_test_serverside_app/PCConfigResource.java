@@ -93,7 +93,9 @@ public class PCConfigResource {
             em.persist(historyEntry);
 
             existing.setHostname(incomingConfig.getHostname());
-            existing.setRoomName(incomingConfig.getRoomName());
+            if (incomingConfig.getRoomName() != null && !incomingConfig.getRoomName().trim().isEmpty()) {
+                existing.setRoomName(incomingConfig.getRoomName());
+            }
             existing.setCpuModel(incomingConfig.getCpuModel());
             existing.setRamGb(incomingConfig.getRamGb());
             existing.setStorage(incomingConfig.getStorage());
