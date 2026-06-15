@@ -2,6 +2,7 @@ package org.example;
 
 import com.google.gson.Gson;
 import oshi.SystemInfo;
+import oshi.hardware.CentralProcessor;
 import oshi.hardware.GraphicsCard;
 import oshi.hardware.HWDiskStore;
 import oshi.hardware.HardwareAbstractionLayer;
@@ -26,7 +27,7 @@ public class Main {
             "f-secure", "bullguard", "webroot", "panda security", "intego"
     ));
 
-    private static final String SERVER_URL = "http://192.168.1.133:8080/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs";
+    private static final String SERVER_URL = "http://192.168.1.134:8080/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs";
 
     public static void main(String[] args) {
         // 1. Fetch the Machine ID once at startup
