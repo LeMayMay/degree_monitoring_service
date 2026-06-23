@@ -26,32 +26,11 @@ public class Main {
             "crowdstrike", "trend micro", "avira", "totalav", "defender",
             "f-secure", "bullguard", "webroot", "panda security", "intego"
     ));
-
     private static final String SERVER_URL = "https://come-legroom-defrost.ngrok-free.dev/Licenta_test_serverside_app-1.0-SNAPSHOT/api/configs";
-
     public static void main(String[] args) {
         // 1. Fetch the Machine ID once at startup
         String machineId = getOrGenerateMachineId();
-
-        // 2. Check for Native OS Triggers via Command Line Arguments
-        if (args.length > 0) {
-            String trigger = args[0].toUpperCase();
-            if (trigger.equals("--BOOT")) {
-                System.out.println("OS Boot Trigger intercepted.");
-                sendPayload("OS_BOOT", machineId);
-                return; // Exit immediately, the native background service will handle polling
-            } else if (trigger.equals("--SHUTDOWN")) {
-                System.out.println("OS Shutdown Trigger intercepted.");
-                sendPayload("OS_SHUTDOWN", machineId);
-                return; // Exit immediately so the OS can finish powering off
-            }
-        }
-
-        // 3. Fallback: Standard continuous background daemon mode
-        System.out.println("PC Agent Daemon Started in Polling Mode.");
         sendPayload("STARTUP", machineId);
-
-        // Standard continuous loop (keeps running indefinitely in the background)
         while (true) {
             try {
                 Thread.sleep(10000);
@@ -65,7 +44,6 @@ public class Main {
         }
     }
 
-    // --- UPDATED: Now accepts machineId as a parameter ---
     private static void sendPayload(String eventType, String machineId) {
         try {
             System.out.println("[" + eventType + "] Gathering system information...");
@@ -165,13 +143,10 @@ public class Main {
         }
     }
 
-    // --- UPGRADED METHOD: Uses Physical Motherboard UUID ---
     private static String getOrGenerateMachineId() {
         try {
             SystemInfo systemInfo = new SystemInfo();
             String hwUUID = systemInfo.getHardware().getComputerSystem().getHardwareUUID();
-
-            // Check if the motherboard returned a valid UUID (not empty, "unknown", or all F's)
             if (hwUUID != null && !hwUUID.trim().isEmpty()
                     && !hwUUID.equalsIgnoreCase("unknown")
                     && !hwUUID.contains("FFFFFFFF")) {

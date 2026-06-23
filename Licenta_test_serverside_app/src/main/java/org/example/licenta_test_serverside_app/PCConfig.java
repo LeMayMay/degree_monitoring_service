@@ -20,7 +20,6 @@ public class PCConfig {
     private String storage;
     private String graphicsCards;
     private String osVersion;
-    private String network;
     private String antivirus;
     private String machineId;
 
@@ -53,9 +52,6 @@ public class PCConfig {
 
     public String getOsVersion() { return osVersion; }
     public void setOsVersion(String osVersion) { this.osVersion = osVersion; }
-
-    public String getNetwork() { return network; }
-    public void setNetwork(String network) { this.network = network; }
 
     public String getAntivirus() { return antivirus; }
     public void setAntivirus(String antivirus) { this.antivirus = antivirus; }
